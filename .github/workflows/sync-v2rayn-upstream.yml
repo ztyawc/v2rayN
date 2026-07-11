@@ -65,10 +65,22 @@ jobs:
         run: |
           set -euo pipefail
           git push --force-with-lease origin "HEAD:$SYNC_BRANCH"
-          if ! gh pr list --head "$SYNC_BRANCH" --state open --json number --jq 'length > 0' | grep -qx true; then
-            gh pr create \
+          if gh pr list --head "$SYNC_BRANCH" --state open --json number --jq 'length > 0' | grep -qx true; then
+            echo "An upstream sync pull request is already open."
+          elif gh pr create \
               --base master \
               --head "$SYNC_BRANCH" \
               --title "chore: sync 2dust/v2rayN upstream" \
-              --body "Automated upstream merge. ServiceLib tests and the Windows WPF build passed before this PR was opened."
+              --body "Automated upstream merge. ServiceLib tests and the Windows WPF build passed before this PR was opened."; then
+            echo "Created the upstream sync pull request."
+          else
+            compare_url="https://github.com/${GITHUB_REPOSITORY}/compare/master...${SYNC_BRANCH}?expand=1"
+            echo "::warning title=Pull request creation unavailable::The tested sync branch was pushed successfully. Open ${compare_url}"
+            {
+              echo "### Upstream sync is ready"
+              echo
+              echo "The tested branch was pushed, but GitHub did not allow this workflow token to create a pull request."
+              echo
+              echo "[Open the upstream sync pull request](${compare_url})"
+            } >> "$GITHUB_STEP_SUMMARY"
           fi
