@@ -8,6 +8,19 @@ namespace ServiceLib.Tests.Services;
 public class CmccUpdateServiceTests
 {
     [Fact]
+    public void V2rayNCoreInfo_ShouldUseForkSpecificReleaseAsset()
+    {
+        var coreInfo = CoreInfoManager.Instance.GetCoreInfo(ECoreType.v2rayN);
+
+        coreInfo.Should().NotBeNull();
+        coreInfo!.Url.Should().Be("https://github.com/ztyawc/v2rayN/releases");
+        coreInfo.ReleaseApiUrl.Should().Be("https://api.github.com/repos/ztyawc/v2rayN/releases");
+        coreInfo.DownloadUrlWin64.Should().EndWith("/v2rayN-windows-64-cmcc.zip");
+        coreInfo.DownloadUrlWinArm64.Should().BeNull();
+        coreInfo.DownloadUrlLinux64.Should().BeNull();
+    }
+
+    [Fact]
     public async Task CheckUpdateCore_LiveRelease_ShouldDownloadVerifiedWindowsArchive()
     {
         if (Environment.GetEnvironmentVariable("V2RAYN_CMCC_UPDATE_LIVE") != "1")

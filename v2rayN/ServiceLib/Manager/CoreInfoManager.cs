@@ -80,7 +80,9 @@ public sealed class CoreInfoManager
     {
         return type switch
         {
-            ECoreType.v2rayN => !Utils.IsPackagedInstall(),
+            ECoreType.v2rayN => !Utils.IsPackagedInstall()
+                && Utils.IsWindows()
+                && RuntimeInformation.ProcessArchitecture == Architecture.X64,
             ECoreType.Xray => true,
             ECoreType.mihomo => true,
             ECoreType.mihomo_cmcc => Utils.IsWindows() && RuntimeInformation.ProcessArchitecture == Architecture.X64,
@@ -115,14 +117,7 @@ public sealed class CoreInfoManager
                     CoreType = ECoreType.v2rayN,
                     Url = GetCoreUrl(ECoreType.v2rayN),
                     ReleaseApiUrl = urlN.Replace(Global.GithubUrl, Global.GithubApiUrl),
-                    DownloadUrlWin64 = urlN + "/download/{0}/v2rayN-windows-64.zip",
-                    DownloadUrlWinArm64 = urlN + "/download/{0}/v2rayN-windows-arm64.zip",
-                    DownloadUrlLinux64 = urlN + "/download/{0}/v2rayN-linux-64.zip",
-                    DownloadUrlLinuxArm64 = urlN + "/download/{0}/v2rayN-linux-arm64.zip",
-                    DownloadUrlLinuxRiscV64 = urlN + "/download/{0}/v2rayN-linux-riscv64.zip",
-                    DownloadUrlLinuxLoong64 = urlN + "/download/{0}/v2rayN-linux-loong64.zip",
-                    DownloadUrlOSX64 = urlN + "/download/{0}/v2rayN-macos-64.zip",
-                    DownloadUrlOSXArm64 = urlN + "/download/{0}/v2rayN-macos-arm64.zip",
+                    DownloadUrlWin64 = urlN + "/download/{0}/v2rayN-windows-64-cmcc.zip",
                 },
 
                 new CoreInfo

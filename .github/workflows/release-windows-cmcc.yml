@@ -2,11 +2,11 @@ name: Release Windows 10 x64 CMCC
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   workflow_dispatch:
     inputs:
       release_tag:
-        description: Optional v2rayN release tag
+        description: Optional cmcc-v2rayn-<current commit> tag override
         required: false
         type: string
 
@@ -116,6 +116,8 @@ jobs:
           dotnet publish .\v2rayN\AmazTool\AmazTool.csproj `
             -c Release -r win-x64 -p:SelfContained=true -p:PublishTrimmed=true `
             -p:EnableWindowsTargeting=true -o $env:OUTPUT_DIR
+          $buildId = "${{ github.sha }}".Substring(0, 12).ToLowerInvariant()
+          Set-Content -Path (Join-Path $env:OUTPUT_DIR "cmcc-build.txt") -Value $buildId
 
       - name: Package Windows 10 x64 release
         shell: pwsh
@@ -133,14 +135,24 @@ jobs:
           path: ${{ env.PACKAGE_FILE }}
           if-no-files-found: error
 
-      - name: Publish requested prerelease
-        if: github.event_name == 'workflow_dispatch' && inputs.release_tag != ''
+      - name: Publish CMCC release
+        if: github.event_name == 'workflow_dispatch'
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG_INPUT: ${{ inputs.release_tag }}
         run: |
-          gh release create "${{ inputs.release_tag }}" "$env:PACKAGE_FILE" `
+          $buildId = "${{ github.sha }}".Substring(0, 12).ToLowerInvariant()
+          $releaseTag = $env:RELEASE_TAG_INPUT.Trim()
+          if (-not $releaseTag) { $releaseTag = "cmcc-v2rayn-$buildId" }
+          $tagMatch = [regex]::Match(
+            $releaseTag,
+            '^cmcc-v2rayn-([0-9a-f]{12})$',
+            [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+          if (-not $tagMatch.Success -or $tagMatch.Groups[1].Value -ne $buildId) {
+            throw "Release tag must be cmcc-v2rayn-$buildId"
+          }
+          gh release create "$releaseTag" "$env:PACKAGE_FILE" `
             --target "${{ github.sha }}" `
-            --title "v2rayN ${{ inputs.release_tag }} CMCC" `
-            --notes "Windows 10 x64 WPF build with verified ztyawc/mihomo CMCC core." `
-            --prerelease
+            --title "v2rayN $releaseTag CMCC" `
+            --notes "Windows 10 x64 WPF build with verified ztyawc/mihomo CMCC core."

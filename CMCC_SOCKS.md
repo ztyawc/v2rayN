@@ -26,6 +26,8 @@ The Windows release workflow builds only the x64 WPF package. It overlays the of
 
 The application updater treats the CMCC core as a separate core type. It compares the 12-character source commit embedded in the local binary with the `cmcc-alpha-<commit>` release tag, downloads the matching Windows asset, verifies SHA-256, then installs it without replacing official Mihomo.
 
+The v2rayN application updater is also fork-specific. It reads stable `cmcc-v2rayn-<commit>` releases from `ztyawc/v2rayN`, requires the `v2rayN-windows-64-cmcc.zip` asset and its GitHub SHA-256 digest, and compares the tag with the packaged `cmcc-build.txt`. It never installs an official `2dust/v2rayN` application package over this fork.
+
 Never commit real access credentials. Live tests read them only from environment variables:
 
 ```powershell
@@ -39,7 +41,7 @@ dotnet test .\v2rayN\ServiceLib.Tests\ServiceLib.Tests.csproj --filter "Generate
 
 ## Long-term upstream maintenance
 
-Keep the v2rayN fork's `main` branch releasable and retain `upstream` as `https://github.com/2dust/v2rayN.git`. The weekly sync workflow merges `upstream/master` on a temporary branch, runs ServiceLib tests and the Windows WPF build, and opens a pull request only after both pass. Merge that PR after reviewing conflicts around enums, the add-server window, core management, and update handling.
+Keep the v2rayN fork's `master` branch releasable and retain `upstream` as `https://github.com/2dust/v2rayN.git`. The weekly sync workflow merges `upstream/master` on a temporary branch, runs ServiceLib tests and the Windows WPF build, and opens a pull request only after both pass. Merge that PR after reviewing conflicts around enums, the add-server window, core management, and update handling.
 
 The Mihomo fork independently follows `MetaCubeX/mihomo:Alpha` using its existing tested sync workflow. Do not copy the CMCC implementation into every new Mihomo snapshot; keep its protocol commits on top of upstream history.
 
@@ -47,7 +49,7 @@ For a manual v2rayN sync:
 
 ```bash
 git fetch upstream master --tags
-git switch main
+git switch master
 git merge --no-edit upstream/master
 dotnet test ./v2rayN/ServiceLib.Tests/ServiceLib.Tests.csproj -c Release
 dotnet build ./v2rayN/v2rayN/v2rayN.csproj -c Release -p:EnableWindowsTargeting=true
