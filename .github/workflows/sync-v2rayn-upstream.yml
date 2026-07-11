@@ -53,7 +53,8 @@ jobs:
         if: steps.merge.outputs.changed == 'true'
         run: |
           dotnet test ./v2rayN/ServiceLib.Tests/ServiceLib.Tests.csproj -c Release
-          dotnet build ./v2rayN/v2rayN/v2rayN.csproj -c Release -p:EnableWindowsTargeting=true
+          dotnet build ./v2rayN/v2rayN/v2rayN.csproj -c Release -r win-x64 \
+            -p:EnableWindowsTargeting=true --self-contained false
 
       - name: Push sync branch and open pull request
         if: steps.merge.outputs.changed == 'true'
