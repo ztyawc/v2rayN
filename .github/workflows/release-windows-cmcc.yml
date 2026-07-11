@@ -136,7 +136,7 @@ jobs:
           if-no-files-found: error
 
       - name: Publish CMCC release
-        if: github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
@@ -152,7 +152,17 @@ jobs:
           if (-not $tagMatch.Success -or $tagMatch.Groups[1].Value -ne $buildId) {
             throw "Release tag must be cmcc-v2rayn-$buildId"
           }
-          gh release create "$releaseTag" "$env:PACKAGE_FILE" `
-            --target "${{ github.sha }}" `
-            --title "v2rayN $releaseTag CMCC" `
-            --notes "Windows 10 x64 WPF build with verified ztyawc/mihomo CMCC core."
+          if (gh release view "$releaseTag" 2>$null) {
+            gh release upload "$releaseTag" "$env:PACKAGE_FILE" --clobber
+            gh release edit "$releaseTag" `
+              --title "v2rayN $releaseTag CMCC" `
+              --notes "Windows 10 x64 WPF build with verified ztyawc/mihomo CMCC core." `
+              --latest
+          }
+          else {
+            gh release create "$releaseTag" "$env:PACKAGE_FILE" `
+              --target "${{ github.sha }}" `
+              --title "v2rayN $releaseTag CMCC" `
+              --notes "Windows 10 x64 WPF build with verified ztyawc/mihomo CMCC core." `
+              --latest
+          }

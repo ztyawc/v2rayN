@@ -22,7 +22,7 @@ Provider-style links using `usr`, `passwd`, and `protocol` query parameters are 
 
 ## Core delivery and updates
 
-The Windows release workflow builds only the x64 WPF package. It overlays the official v2rayN core bundle with the latest `mihomo-windows-amd64-v1-cmcc.zip`, verifies GitHub's SHA-256 asset digest, checks the `-cmcc.<commit>` version marker, and stores the core under `bin/mihomo_cmcc`.
+The Windows release workflow builds only the x64 WPF package. It overlays the official v2rayN core bundle with the latest `mihomo-windows-amd64-v1-cmcc.zip`, verifies GitHub's SHA-256 asset digest, checks the `-cmcc.<commit>` version marker, and stores the core under `bin/mihomo_cmcc`. Every successful push to the fork's `master` branch publishes or refreshes a stable `cmcc-v2rayn-<commit>` release, so a merged upstream sync becomes available to the in-app updater automatically.
 
 The application updater treats the CMCC core as a separate core type. It compares the 12-character source commit embedded in the local binary with the `cmcc-alpha-<commit>` release tag, downloads the matching Windows asset, verifies SHA-256, then installs it without replacing official Mihomo.
 
@@ -41,7 +41,7 @@ dotnet test .\v2rayN\ServiceLib.Tests\ServiceLib.Tests.csproj --filter "Generate
 
 ## Long-term upstream maintenance
 
-Keep the v2rayN fork's `master` branch releasable and retain `upstream` as `https://github.com/2dust/v2rayN.git`. The weekly sync workflow merges `upstream/master` on a temporary branch, runs ServiceLib tests and the Windows WPF build, and opens a pull request only after both pass. Merge that PR after reviewing conflicts around enums, the add-server window, core management, and update handling.
+Keep the v2rayN fork's `master` branch releasable and retain `upstream` as `https://github.com/2dust/v2rayN.git`. The daily sync workflow merges `upstream/master` on a temporary branch, runs ServiceLib tests and the Windows WPF build, and opens a pull request only after both pass. Merge that PR after reviewing conflicts around enums, the add-server window, core management, and update handling. A merge conflict stops the workflow instead of modifying the CMCC patch automatically.
 
 The Mihomo fork independently follows `MetaCubeX/mihomo:Alpha` using its existing tested sync workflow. Do not copy the CMCC implementation into every new Mihomo snapshot; keep its protocol commits on top of upstream history.
 
