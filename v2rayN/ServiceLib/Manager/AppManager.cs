@@ -40,7 +40,7 @@ public sealed class AppManager
         switch (type)
         {
             case ECoreType.Xray when RunningCoreType is ECoreType.Xray or ECoreType.v2fly or ECoreType.v2fly_v5:
-            case ECoreType.sing_box when RunningCoreType is ECoreType.sing_box or ECoreType.mihomo:
+            case ECoreType.sing_box when RunningCoreType is ECoreType.sing_box or ECoreType.mihomo or ECoreType.mihomo_cmcc:
                 return true;
 
             default:
@@ -664,6 +664,11 @@ public sealed class AppManager
 
     public ECoreType GetCoreType(ProfileItem profileItem, EConfigType eConfigType)
     {
+        if (eConfigType == EConfigType.CmccSocks)
+        {
+            return ECoreType.mihomo_cmcc;
+        }
+
         if (profileItem?.CoreType != null)
         {
             return (ECoreType)profileItem.CoreType;

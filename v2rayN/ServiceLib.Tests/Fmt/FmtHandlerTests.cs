@@ -68,6 +68,43 @@ public class FmtHandlerTests
         resolved.Password.Should().Be(source.Password);
     }
 
+    [Theory]
+    [InlineData("0x80")]
+    [InlineData("0x82")]
+    public void GetShareUriAndResolveConfig_CmccSocks_ShouldRoundTripBasicFields(string method)
+    {
+        var source = new ProfileItem
+        {
+            ConfigType = EConfigType.CmccSocks,
+            CoreType = ECoreType.mihomo_cmcc,
+            Remarks = "CMCC demo",
+            Address = "192.0.2.10",
+            Port = 10800,
+            Username = "1234567890123456789",
+            Password = "p@ss:word",
+        };
+        source.SetProtocolExtra(new ProtocolExtraItem { CmccAuthMethod = method });
+
+        var resolved = ExportThenImport(source);
+
+        resolved.ConfigType.Should().Be(EConfigType.CmccSocks);
+        resolved.CoreType.Should().Be(ECoreType.mihomo_cmcc);
+        resolved.Username.Should().Be(source.Username);
+        resolved.Password.Should().Be(source.Password);
+        resolved.GetProtocolExtra().CmccAuthMethod.Should().Be(method);
+    }
+
+    [Fact]
+    public void ResolveConfig_CmccProviderUriWithoutMethod_ShouldDefaultTo80()
+    {
+        var uri = "cmcc://192.0.2.10:10800?usr=1234567890123456789&passwd=secret";
+
+        var resolved = FmtHandler.ResolveConfig(uri, out _);
+
+        resolved.Should().NotBeNull();
+        resolved!.GetProtocolExtra().CmccAuthMethod.Should().Be("0x80");
+    }
+
     [Fact]
     public void ResolveConfig_UnsupportedProtocol_ShouldReturnNull()
     {

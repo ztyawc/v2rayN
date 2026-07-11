@@ -12,6 +12,7 @@ public class MainWindowViewModel : MyReactiveObject
     public ReactiveCommand<Unit, Unit> AddVlessServerCmd { get; }
     public ReactiveCommand<Unit, Unit> AddShadowsocksServerCmd { get; }
     public ReactiveCommand<Unit, Unit> AddSocksServerCmd { get; }
+    public ReactiveCommand<Unit, Unit> AddCmccSocksServerCmd { get; }
     public ReactiveCommand<Unit, Unit> AddHttpServerCmd { get; }
     public ReactiveCommand<Unit, Unit> AddTrojanServerCmd { get; }
     public ReactiveCommand<Unit, Unit> AddHysteria2ServerCmd { get; }
@@ -95,6 +96,10 @@ public class MainWindowViewModel : MyReactiveObject
         AddSocksServerCmd = ReactiveCommand.CreateFromTask(async () =>
         {
             await AddServerAsync(EConfigType.SOCKS);
+        });
+        AddCmccSocksServerCmd = ReactiveCommand.CreateFromTask(async () =>
+        {
+            await AddServerAsync(EConfigType.CmccSocks);
         });
         AddHttpServerCmd = ReactiveCommand.CreateFromTask(async () =>
         {

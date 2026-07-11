@@ -46,6 +46,17 @@ public class NodeValidator
         v.Assert(!item.Address.IsNullOrEmpty(), string.Format(ResUI.MsgInvalidProperty, ResUI.TbAddress));
         v.Assert(item.Port is > 0 and <= 65535, string.Format(ResUI.MsgInvalidProperty, ResUI.TbPort));
 
+        if (item.ConfigType == EConfigType.CmccSocks)
+        {
+            v.Assert(coreType == ECoreType.mihomo_cmcc,
+                string.Format(ResUI.MsgCoreNotSupportProtocol, coreType, item.ConfigType));
+            v.Assert(!item.Username.IsNullOrEmpty(), string.Format(ResUI.MsgInvalidProperty, ResUI.TbSecurity4));
+            v.Assert(!item.Password.IsNullOrEmpty(), string.Format(ResUI.MsgInvalidProperty, ResUI.TbId4));
+            v.Assert(!CmccSocksFmt.NormalizeAuthMethod(item.GetProtocolExtra().CmccAuthMethod).IsNullOrEmpty(),
+                string.Format(ResUI.MsgInvalidProperty, "CMCC auth method"));
+            return;
+        }
+
         // Network & Core Logic
         var net = item.GetNetwork();
         if (coreType == ECoreType.sing_box)

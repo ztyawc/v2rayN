@@ -103,6 +103,11 @@ public class CoreManager
 
     public async Task<ProcessService?> LoadCoreConfigSpeedtest(List<ServerTestItem> selecteds)
     {
+        if (selecteds.Count == 1 && selecteds[0].ConfigType == EConfigType.CmccSocks)
+        {
+            return await LoadCoreConfigSpeedtest(selecteds[0]);
+        }
+
         var coreType = selecteds.FirstOrDefault()?.CoreType == ECoreType.sing_box ? ECoreType.sing_box : ECoreType.Xray;
         var fileName = string.Format(Global.CoreSpeedtestConfigFileName, Utils.GetGuid(false));
         var configPath = Utils.GetBinConfigPath(fileName);
@@ -187,6 +192,18 @@ public class CoreManager
             return;
         }
         _processService = proc;
+    }
+
+    private static async Task<bool> IsCmccMihomoCore(CoreInfo? coreInfo)
+    {
+        var fileName = CoreInfoManager.Instance.GetCoreExecFile(coreInfo, out _);
+        if (fileName.IsNullOrEmpty())
+        {
+            return false;
+        }
+
+        var output = await Utils.GetCliWrapOutput(fileName, coreInfo?.VersionArg ?? "-v");
+        return Regex.IsMatch(output ?? string.Empty, @"-cmcc\.[0-9a-f]{12}\b", RegexOptions.IgnoreCase);
     }
 
     private async Task CoreStartPreService(CoreConfigContext? preContext)
@@ -289,6 +306,12 @@ public class CoreManager
 
     private async Task<ProcessService?> RunProcess(CoreInfo? coreInfo, string configPath, bool displayLog, bool mayNeedSudo)
     {
+        if (coreInfo?.CoreType == ECoreType.mihomo_cmcc && !await IsCmccMihomoCore(coreInfo))
+        {
+            await UpdateFunc(true, "CMCC Mihomo core is missing or incompatible. Update the mihomo_cmcc core and try again.");
+            return null;
+        }
+
         var fileName = CoreInfoManager.Instance.GetCoreExecFile(coreInfo, out var msg);
         if (fileName.IsNullOrEmpty())
         {
@@ -300,7 +323,7 @@ public class CoreManager
         {
             if (mayNeedSudo
                 && _config.TunModeItem.EnableTun
-                && (coreInfo.CoreType is ECoreType.sing_box or ECoreType.mihomo or ECoreType.Xray)
+                && (coreInfo.CoreType is ECoreType.sing_box or ECoreType.mihomo or ECoreType.mihomo_cmcc or ECoreType.Xray)
                 && Utils.IsNonWindows())
             {
                 _linuxSudo = true;

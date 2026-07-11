@@ -270,6 +270,7 @@ public static class ConfigHandler
             EConfigType.VMess => await AddVMessServer(config, item),
             EConfigType.Shadowsocks => await AddShadowsocksServer(config, item),
             EConfigType.SOCKS => await AddSocksServer(config, item),
+            EConfigType.CmccSocks => await AddCmccSocksServer(config, item),
             EConfigType.HTTP => await AddHttpServer(config, item),
             EConfigType.Trojan => await AddTrojanServer(config, item),
             EConfigType.VLESS => await AddVlessServer(config, item),
@@ -647,6 +648,30 @@ public static class ConfigHandler
 
         await AddServerCommon(config, profileItem, toFile);
 
+        return 0;
+    }
+
+    /// <summary>
+    /// Add or edit a CMCC private SOCKS5 server.
+    /// </summary>
+    public static async Task<int> AddCmccSocksServer(Config config, ProfileItem profileItem, bool toFile = true)
+    {
+        var method = CmccSocksFmt.NormalizeAuthMethod(profileItem.GetProtocolExtra().CmccAuthMethod);
+        if (profileItem.Address.IsNullOrEmpty()
+            || profileItem.Port is <= 0 or >= Global.MaxPort
+            || profileItem.Username.IsNullOrEmpty()
+            || profileItem.Password.IsNullOrEmpty()
+            || method.IsNullOrEmpty())
+        {
+            return -1;
+        }
+
+        profileItem.ConfigType = EConfigType.CmccSocks;
+        profileItem.CoreType = ECoreType.mihomo_cmcc;
+        profileItem.Address = profileItem.Address.TrimEx();
+        profileItem.SetProtocolExtra(profileItem.GetProtocolExtra() with { CmccAuthMethod = method });
+
+        await AddServerCommon(config, profileItem, toFile);
         return 0;
     }
 
@@ -1496,7 +1521,7 @@ public static class ConfigHandler
         ProfileItem? itemSocks = null;
         var enableLegacyProtect = config.TunModeItem.EnableLegacyProtect;
         if (node.ConfigType != EConfigType.Custom
-            && coreType != ECoreType.sing_box
+            && coreType is not (ECoreType.sing_box or ECoreType.mihomo or ECoreType.mihomo_cmcc)
             && config.TunModeItem.EnableTun
             && enableLegacyProtect)
         {
@@ -1615,6 +1640,7 @@ public static class ConfigHandler
                 EConfigType.VMess => await AddVMessServer(config, profileItem, false),
                 EConfigType.Shadowsocks => await AddShadowsocksServer(config, profileItem, false),
                 EConfigType.SOCKS => await AddSocksServer(config, profileItem, false),
+                EConfigType.CmccSocks => await AddCmccSocksServer(config, profileItem, false),
                 EConfigType.Trojan => await AddTrojanServer(config, profileItem, false),
                 EConfigType.VLESS => await AddVlessServer(config, profileItem, false),
                 EConfigType.Hysteria2 => await AddHysteria2Server(config, profileItem, false),
@@ -1812,6 +1838,7 @@ public static class ConfigHandler
                     EConfigType.Shadowsocks => await AddShadowsocksServer(config, profileItem, false),
                     EConfigType.HTTP => await AddHttpServer(config, profileItem, false),
                     EConfigType.SOCKS => await AddSocksServer(config, profileItem, false),
+                    EConfigType.CmccSocks => await AddCmccSocksServer(config, profileItem, false),
                     EConfigType.Trojan => await AddTrojanServer(config, profileItem, false),
                     EConfigType.VLESS => await AddVlessServer(config, profileItem, false),
                     EConfigType.Hysteria2 => await AddHysteria2Server(config, profileItem, false),

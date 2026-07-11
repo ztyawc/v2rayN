@@ -20,6 +20,7 @@ public class FmtHandler
                 EConfigType.WireGuard => WireguardFmt.ToUri(item),
                 EConfigType.Anytls => AnytlsFmt.ToUri(item),
                 EConfigType.Naive => NaiveFmt.ToUri(item),
+                EConfigType.CmccSocks => CmccSocksFmt.ToUri(item),
                 _ => null,
             };
 
@@ -94,6 +95,10 @@ public class FmtHandler
                      || str.StartsWith(Global.NaiveQuicProtocolShare))
             {
                 return NaiveFmt.Resolve(str, out msg);
+            }
+            else if (str.StartsWith(Global.ProtocolShares[EConfigType.CmccSocks]))
+            {
+                return CmccSocksFmt.Resolve(str, out msg);
             }
             else
             {

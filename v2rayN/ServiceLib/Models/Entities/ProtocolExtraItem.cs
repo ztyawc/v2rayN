@@ -18,6 +18,9 @@ public record ProtocolExtraItem
     //public string? PluginArgs { get; init; }
     public string? SsMethod { get; init; }
 
+    // CMCC private SOCKS5
+    public string? CmccAuthMethod { get; init; }
+
     // wireguard
     public string? WgPublicKey { get; init; }
     public string? WgPresharedKey { get; init; }

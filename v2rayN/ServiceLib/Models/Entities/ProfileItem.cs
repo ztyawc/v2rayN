@@ -112,6 +112,16 @@ public class ProfileItem
                 }
 
                 break;
+
+            case EConfigType.CmccSocks:
+                if (Username.IsNullOrEmpty()
+                    || Password.IsNullOrEmpty()
+                    || CmccSocksFmt.NormalizeAuthMethod(GetProtocolExtra().CmccAuthMethod).IsNullOrEmpty())
+                {
+                    return false;
+                }
+
+                break;
         }
 
         if ((ConfigType is EConfigType.VLESS or EConfigType.Trojan)

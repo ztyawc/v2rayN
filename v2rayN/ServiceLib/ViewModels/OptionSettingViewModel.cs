@@ -258,8 +258,13 @@ public class OptionSettingViewModel : MyReactiveObject
             _config.CoreTypeItem.Add(new CoreTypeItem()
             {
                 ConfigType = it,
-                CoreType = ECoreType.Xray
+                CoreType = it == EConfigType.CmccSocks ? ECoreType.mihomo_cmcc : ECoreType.Xray
             });
+        }
+        var cmccCoreType = _config.CoreTypeItem.FirstOrDefault(it => it.ConfigType == EConfigType.CmccSocks);
+        if (cmccCoreType != null)
+        {
+            cmccCoreType.CoreType = ECoreType.mihomo_cmcc;
         }
         _config.CoreTypeItem.ForEach(it =>
         {

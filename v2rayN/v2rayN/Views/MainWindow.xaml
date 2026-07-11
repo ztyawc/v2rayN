@@ -112,6 +112,10 @@
                                     Height="{StaticResource MenuItemHeight}"
                                     Header="{x:Static resx:ResUI.menuAddSocksServer}" />
                                 <MenuItem
+                                    x:Name="menuAddCmccSocksServer"
+                                    Height="{StaticResource MenuItemHeight}"
+                                    Header="CMCC SOCKS" />
+                                <MenuItem
                                     x:Name="menuAddHttpServer"
                                     Height="{StaticResource MenuItemHeight}"
                                     Header="{x:Static resx:ResUI.menuAddHttpServer}" />

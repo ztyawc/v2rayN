@@ -349,6 +349,25 @@
                         Width="400"
                         Margin="{StaticResource Margin4}"
                         Style="{StaticResource DefTextBox}" />
+
+                    <TextBlock
+                        x:Name="labCmccAuthMethod"
+                        Grid.Row="3"
+                        Grid.Column="0"
+                        Margin="{StaticResource Margin4}"
+                        VerticalAlignment="Center"
+                        Style="{StaticResource ToolbarTextBlock}"
+                        Text="CMCC auth method"
+                        Visibility="Collapsed" />
+                    <ComboBox
+                        x:Name="cmbCmccAuthMethod"
+                        Grid.Row="3"
+                        Grid.Column="1"
+                        Width="200"
+                        Margin="{StaticResource Margin4}"
+                        HorizontalAlignment="Left"
+                        Style="{StaticResource DefComboBox}"
+                        Visibility="Collapsed" />
                 </Grid>
                 <Grid
                     x:Name="gridVLESS"
