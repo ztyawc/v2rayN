@@ -6,6 +6,111 @@ namespace ServiceLib.Services.CoreConfig;
 public class CoreConfigClashService(Config config)
 {
     private static readonly string _tag = "CoreConfigClashService";
+    private const string CmccProxyName = "cmcc-proxy";
+
+    public async Task<RetResult> GenerateClientCmccConfig(ProfileItem node, string? fileName, int? inboundPort = null)
+    {
+        var ret = new RetResult { Msg = ResUI.InitialConfiguration };
+        if (fileName.IsNullOrEmpty())
+        {
+            ret.Msg = ResUI.CheckServerSettings;
+            return ret;
+        }
+
+        try
+        {
+            var method = CmccSocksFmt.NormalizeAuthMethod(node.GetProtocolExtra().CmccAuthMethod);
+            if (!node.IsValid() || method.IsNullOrEmpty())
+            {
+                ret.Msg = ResUI.CheckServerSettings;
+                return ret;
+            }
+
+            var fileContent = new Dictionary<string, object>
+            {
+                ["proxies"] = new List<object>
+                {
+                    new Dictionary<string, object>
+                    {
+                        ["name"] = CmccProxyName,
+                        ["type"] = "socks5",
+                        ["server"] = node.Address,
+                        ["port"] = node.Port,
+                        ["username"] = node.Username,
+                        ["password"] = node.Password,
+                        ["cmcc-auth-method"] = method,
+                        ["udp"] = false,
+                    }
+                },
+                ["proxy-groups"] = new List<object>
+                {
+                    new Dictionary<string, object>
+                    {
+                        ["name"] = "PROXY",
+                        ["type"] = "select",
+                        ["proxies"] = new List<string> { CmccProxyName },
+                    }
+                },
+                ["rules"] = new List<string> { "MATCH,PROXY" },
+            };
+
+            fileContent["mixed-port"] = inboundPort ?? AppManager.Instance.GetLocalPort(EInboundProtocol.socks);
+            fileContent["log-level"] = GetLogLevel(config.CoreBasicItem.Loglevel);
+            fileContent["external-controller"] = $"{Global.Loopback}:{AppManager.Instance.StatePort2}";
+
+            if (config.Inbound.First().AllowLANConn && inboundPort == null)
+            {
+                fileContent["allow-lan"] = "true";
+                fileContent["bind-address"] = "*";
+            }
+            else
+            {
+                fileContent["allow-lan"] = "false";
+                fileContent["bind-address"] = Global.Loopback;
+            }
+
+            fileContent["ipv6"] = config.ClashUIItem.EnableIPv6;
+            fileContent["mode"] = nameof(ERuleMode.Rule).ToLower();
+
+            if (config.TunModeItem.EnableTun && inboundPort == null)
+            {
+                var tun = EmbedUtils.GetEmbedText(Global.ClashTunYaml);
+                if (tun.IsNotEmpty())
+                {
+                    var tunContent = YamlUtils.FromYaml<Dictionary<string, object>>(tun);
+                    if (tunContent?.TryGetValue("tun", out var tunValue) == true)
+                    {
+                        fileContent["tun"] = tunValue;
+                    }
+                }
+                fileContent["dns"] = new Dictionary<string, object>
+                {
+                    ["enable"] = true,
+                    ["enhanced-mode"] = "fake-ip",
+                    ["nameserver"] = new List<string> { "223.5.5.5", "1.1.1.1" },
+                };
+            }
+
+            var txtFileNew = YamlUtils.ToYaml(fileContent);
+            await File.WriteAllTextAsync(fileName, txtFileNew);
+            if (!File.Exists(fileName))
+            {
+                ret.Msg = ResUI.FailedReadConfiguration + "2";
+                return ret;
+            }
+
+            ClashApiManager.Instance.ProfileContent = fileContent;
+            ret.Msg = string.Format(ResUI.SuccessfulConfiguration, node.GetSummary());
+            ret.Success = true;
+            return ret;
+        }
+        catch (Exception ex)
+        {
+            Logging.SaveLog(_tag, ex);
+            ret.Msg = ResUI.FailedGenDefaultConfiguration;
+            return ret;
+        }
+    }
 
     public async Task<RetResult> GenerateClientCustomConfig(ProfileItem node, string? fileName)
     {

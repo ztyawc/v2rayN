@@ -239,7 +239,8 @@ public class Global
         { EConfigType.TUIC, "tuic://" },
         { EConfigType.WireGuard, "wireguard://" },
         { EConfigType.Anytls, "anytls://" },
-        { EConfigType.Naive, "naive://" }
+        { EConfigType.Naive, "naive://" },
+        { EConfigType.CmccSocks, "cmcc://" }
     };
 
     public static readonly Dictionary<EConfigType, string> ProtocolTypes = new()
@@ -254,7 +255,8 @@ public class Global
         { EConfigType.TUIC, "tuic" },
         { EConfigType.WireGuard, "wireguard" },
         { EConfigType.Anytls, "anytls" },
-        { EConfigType.Naive, "naive" }
+        { EConfigType.Naive, "naive" },
+        { EConfigType.CmccSocks, "socks5" }
     };
 
     public static readonly List<string> VmessSecurities =
@@ -641,6 +643,7 @@ public class Global
         { ECoreType.Xray, "XTLS/Xray-core" },
         { ECoreType.sing_box, "SagerNet/sing-box" },
         { ECoreType.mihomo, "MetaCubeX/mihomo" },
+        { ECoreType.mihomo_cmcc, "ztyawc/mihomo" },
         { ECoreType.hysteria, "apernet/hysteria" },
         { ECoreType.hysteria2, "apernet/hysteria" },
         { ECoreType.naiveproxy, "klzgrad/naiveproxy" },
@@ -650,7 +653,7 @@ public class Global
         { ECoreType.overtls, "ShadowsocksR-Live/overtls" },
         { ECoreType.shadowquic, "spongebob888/shadowquic" },
         { ECoreType.mieru, "enfein/mieru" },
-        { ECoreType.v2rayN, "2dust/v2rayN" },
+        { ECoreType.v2rayN, "ztyawc/v2rayN" },
     };
 
     public static readonly List<string> OtherGeoUrls =

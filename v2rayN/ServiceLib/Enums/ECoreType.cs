@@ -16,5 +16,6 @@ public enum ECoreType
     overtls = 28,
     shadowquic = 29,
     mieru = 30,
+    mihomo_cmcc = 31,
     v2rayN = 99
 }

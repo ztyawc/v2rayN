@@ -1,0 +1,73 @@
+name: Sync v2rayN upstream
+
+on:
+  schedule:
+    - cron: "23 18 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: sync-v2rayn-upstream
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: github.repository != '2dust/v2rayN'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out maintenance branch
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: master
+
+      - name: Merge upstream master on a sync branch
+        id: merge
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add upstream https://github.com/2dust/v2rayN.git
+          git fetch --no-tags upstream master
+          if git merge-base --is-ancestor upstream/master HEAD; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          branch="sync/upstream-$(git rev-parse --short=12 upstream/master)"
+          git switch -C "$branch"
+          git merge --no-edit upstream/master
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Set up .NET 10
+        if: steps.merge.outputs.changed == 'true'
+        uses: actions/setup-dotnet@v5.4.0
+        with:
+          dotnet-version: 10.0.1xx
+
+      - name: Verify merged tree
+        if: steps.merge.outputs.changed == 'true'
+        run: |
+          dotnet test ./v2rayN/ServiceLib.Tests/ServiceLib.Tests.csproj -c Release
+          dotnet build ./v2rayN/v2rayN/v2rayN.csproj -c Release -p:EnableWindowsTargeting=true
+
+      - name: Push sync branch and open pull request
+        if: steps.merge.outputs.changed == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SYNC_BRANCH: ${{ steps.merge.outputs.branch }}
+        run: |
+          set -euo pipefail
+          git push --force-with-lease origin "HEAD:$SYNC_BRANCH"
+          if ! gh pr list --head "$SYNC_BRANCH" --state open --json number --jq 'length > 0' | grep -qx true; then
+            gh pr create \
+              --base master \
+              --head "$SYNC_BRANCH" \
+              --title "chore: sync 2dust/v2rayN upstream" \
+              --body "Automated upstream merge. ServiceLib tests and the Windows WPF build passed before this PR was opened."
+          fi

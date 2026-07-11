@@ -186,6 +186,17 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
 
     private async Task RunRealPingBatchAsync(List<ServerTestItem> lstSelected, string exitLoopKey, int pageSize = 0)
     {
+        var cmccItems = lstSelected.Where(x => x.ConfigType == EConfigType.CmccSocks).ToList();
+        if (cmccItems.Count > 0)
+        {
+            await RunMixedTestAsync(cmccItems, _config.SpeedTestItem.MixedConcurrencyCount, false, exitLoopKey);
+            lstSelected = lstSelected.Where(x => x.ConfigType != EConfigType.CmccSocks).ToList();
+        }
+        if (lstSelected.Count == 0)
+        {
+            return;
+        }
+
         if (pageSize <= 0)
         {
             pageSize = Math.Min(lstSelected.Count, _speedTestPageSize);

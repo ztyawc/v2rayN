@@ -2,6 +2,9 @@ namespace ServiceLib.Services;
 
 public class UpdateService(Config config, Func<bool, string, Task> updateFunc)
 {
+    private const string CmccV2rayNReleasePrefix = "cmcc-v2rayn-";
+    private const string CmccV2rayNAssetName = "v2rayN-windows-64-cmcc.zip";
+    private const string CmccV2rayNBuildFile = "cmcc-build.txt";
     private readonly Config? _config = config;
     private readonly Func<bool, string, Task>? _updateFunc = updateFunc;
     private readonly int _timeout = 30;
@@ -11,12 +14,19 @@ public class UpdateService(Config config, Func<bool, string, Task> updateFunc)
     {
         var url = string.Empty;
         var fileName = string.Empty;
+        var expectedSha256 = string.Empty;
 
         DownloadService downloadHandle = new();
         downloadHandle.UpdateCompleted += (sender2, args) =>
         {
             if (args.Success)
             {
+                if (expectedSha256.IsNotEmpty() && !VerifySha256(fileName, expectedSha256))
+                {
+                    _ = UpdateFunc(false, "Downloaded application failed SHA-256 verification.");
+                    File.Delete(fileName);
+                    return;
+                }
                 _ = UpdateFunc(false, ResUI.MsgDownloadV2rayCoreSuccessfully);
                 _ = UpdateFunc(true, Utils.UrlEncode(fileName));
             }
@@ -38,6 +48,7 @@ public class UpdateService(Config config, Func<bool, string, Task> updateFunc)
             await UpdateFunc(false, result.Msg);
 
             url = result.Url.ToString();
+            expectedSha256 = result.Sha256 ?? string.Empty;
             fileName = Utils.GetTempPath(Utils.GetGuid());
             await downloadHandle.DownloadFileAsync(url, fileName, true, _timeout);
         }
@@ -51,12 +62,19 @@ public class UpdateService(Config config, Func<bool, string, Task> updateFunc)
     {
         var url = string.Empty;
         var fileName = string.Empty;
+        var expectedSha256 = string.Empty;
 
         DownloadService downloadHandle = new();
         downloadHandle.UpdateCompleted += (sender2, args) =>
         {
             if (args.Success)
             {
+                if (expectedSha256.IsNotEmpty() && !VerifySha256(fileName, expectedSha256))
+                {
+                    _ = UpdateFunc(false, "Downloaded core failed SHA-256 verification.");
+                    File.Delete(fileName);
+                    return;
+                }
                 _ = UpdateFunc(false, ResUI.MsgDownloadV2rayCoreSuccessfully);
                 _ = UpdateFunc(false, ResUI.MsgUnpacking);
 
@@ -87,6 +105,7 @@ public class UpdateService(Config config, Func<bool, string, Task> updateFunc)
             await UpdateFunc(false, result.Msg);
 
             url = result.Url.ToString();
+            expectedSha256 = result.Sha256 ?? string.Empty;
             var ext = url.Contains(".tar.gz") ? ".tar.gz" : Path.GetExtension(url);
             fileName = Utils.GetTempPath(Utils.GetGuid() + ext);
             await downloadHandle.DownloadFileAsync(url, fileName, true, _timeout);
@@ -151,6 +170,16 @@ public class UpdateService(Config config, Func<bool, string, Task> updateFunc)
     {
         try
         {
+            if (type == ECoreType.v2rayN)
+            {
+                return await CheckUpdateCmccV2rayN(downloadHandle, preRelease);
+            }
+
+            if (type == ECoreType.mihomo_cmcc)
+            {
+                return await CheckUpdateCmccMihomo(downloadHandle);
+            }
+
             var result = await GetRemoteVersion(downloadHandle, type, preRelease);
             if (!result.Success || result.Version is null)
             {
@@ -164,6 +193,126 @@ public class UpdateService(Config config, Func<bool, string, Task> updateFunc)
             await UpdateFunc(false, ex.Message);
             return new UpdateResult(false, ex.Message);
         }
+    }
+
+    private async Task<UpdateResult> CheckUpdateCmccV2rayN(DownloadService downloadHandle, bool includePrerelease)
+    {
+        var coreInfo = CoreInfoManager.Instance.GetCoreInfo(ECoreType.v2rayN);
+        var json = await downloadHandle.TryDownloadString(coreInfo?.ReleaseApiUrl, true, Global.AppName);
+        var releases = JsonUtils.Deserialize<List<GitHubRelease>>(json);
+        var release = releases?.FirstOrDefault(x =>
+            !x.Draft
+            && (includePrerelease || !x.Prerelease)
+            && Regex.IsMatch(x.TagName ?? string.Empty,
+                $@"^{Regex.Escape(CmccV2rayNReleasePrefix)}[0-9a-f]{{12}}$",
+                RegexOptions.IgnoreCase));
+        var asset = release?.Assets?.FirstOrDefault(x =>
+            x.Name?.Equals(CmccV2rayNAssetName, StringComparison.OrdinalIgnoreCase) == true);
+        if (release?.TagName is not { Length: > 0 } tagName
+            || asset?.BrowserDownloadUrl is not { Length: > 0 } downloadUrl
+            || asset.Digest is not { Length: > 0 } digest)
+        {
+            return new UpdateResult(false, "No compatible CMCC v2rayN release was found.");
+        }
+
+        var tagMatch = Regex.Match(tagName,
+            $@"^{Regex.Escape(CmccV2rayNReleasePrefix)}([0-9a-f]{{12}})$",
+            RegexOptions.IgnoreCase);
+        var digestMatch = Regex.Match(digest, @"^sha256:([0-9a-f]{64})$", RegexOptions.IgnoreCase);
+        if (!tagMatch.Success || !digestMatch.Success)
+        {
+            return new UpdateResult(false, "The CMCC v2rayN release metadata is invalid.");
+        }
+
+        var remoteBuildId = tagMatch.Groups[1].Value;
+        var localBuildId = await GetCmccV2rayNBuildId();
+        if (localBuildId.Equals(remoteBuildId, StringComparison.OrdinalIgnoreCase))
+        {
+            return new UpdateResult(false,
+                string.Format(ResUI.IsLatestN, ECoreType.v2rayN, release.Name ?? tagName));
+        }
+
+        return new UpdateResult(true, new SemanticVersion(release.Name ?? tagName))
+        {
+            Msg = release.Name ?? tagName,
+            Url = downloadUrl,
+            Sha256 = digestMatch.Groups[1].Value,
+        };
+    }
+
+    private static async Task<string> GetCmccV2rayNBuildId()
+    {
+        var fileName = Utils.GetBaseDirectory(CmccV2rayNBuildFile);
+        if (!File.Exists(fileName))
+        {
+            return string.Empty;
+        }
+
+        var content = (await File.ReadAllTextAsync(fileName)).Trim();
+        return Regex.Match(content, @"^[0-9a-f]{12}$", RegexOptions.IgnoreCase).Value;
+    }
+
+    private async Task<UpdateResult> CheckUpdateCmccMihomo(DownloadService downloadHandle)
+    {
+        var coreInfo = CoreInfoManager.Instance.GetCoreInfo(ECoreType.mihomo_cmcc);
+        var json = await downloadHandle.TryDownloadString(coreInfo?.ReleaseApiUrl, true, Global.AppName);
+        var releases = JsonUtils.Deserialize<List<GitHubRelease>>(json);
+        var release = releases?.FirstOrDefault(x =>
+            x.Prerelease && x.TagName?.StartsWith("cmcc-alpha-", StringComparison.OrdinalIgnoreCase) == true);
+        var asset = release?.Assets?.FirstOrDefault(x =>
+            x.Name?.Equals("mihomo-windows-amd64-v1-cmcc.zip", StringComparison.OrdinalIgnoreCase) == true);
+        if (release?.TagName is not { Length: > 0 } tagName
+            || asset?.BrowserDownloadUrl is not { Length: > 0 } downloadUrl
+            || asset.Digest is not { Length: > 0 } digest)
+        {
+            return new UpdateResult(false, ResUI.FailedGetDefaultConfiguration);
+        }
+
+        var tagMatch = Regex.Match(tagName, @"^cmcc-alpha-([0-9a-f]{12})$", RegexOptions.IgnoreCase);
+        var digestMatch = Regex.Match(digest, @"^sha256:([0-9a-f]{64})$", RegexOptions.IgnoreCase);
+        if (!tagMatch.Success || !digestMatch.Success)
+        {
+            return new UpdateResult(false, ResUI.FailedGetDefaultConfiguration);
+        }
+
+        var remoteBuildId = tagMatch.Groups[1].Value;
+        var localBuildId = await GetCmccMihomoBuildId(coreInfo);
+        if (localBuildId.Equals(remoteBuildId, StringComparison.OrdinalIgnoreCase))
+        {
+            return new UpdateResult(false,
+                string.Format(ResUI.IsLatestCore, ECoreType.mihomo_cmcc, release.Name ?? release.TagName));
+        }
+
+        var result = new UpdateResult(true, new SemanticVersion(release.Name ?? release.TagName))
+        {
+            Msg = release.Name ?? release.TagName,
+            Url = downloadUrl,
+            Sha256 = digestMatch.Groups[1].Value,
+        };
+        return result;
+    }
+
+    private static async Task<string> GetCmccMihomoBuildId(CoreInfo? coreInfo)
+    {
+        var fileName = CoreInfoManager.Instance.GetCoreExecFile(coreInfo, out _);
+        if (fileName.IsNullOrEmpty())
+        {
+            return string.Empty;
+        }
+
+        var output = await Utils.GetCliWrapOutput(fileName, coreInfo?.VersionArg ?? "-v") ?? string.Empty;
+        return Regex.Match(output, @"-cmcc\.([0-9a-f]{12})", RegexOptions.IgnoreCase).Groups[1].Value;
+    }
+
+    private static bool VerifySha256(string fileName, string expected)
+    {
+        if (!File.Exists(fileName) || expected.IsNullOrEmpty())
+        {
+            return false;
+        }
+        using var stream = File.OpenRead(fileName);
+        var actual = Convert.ToHexString(SHA256.HashData(stream));
+        return actual.Equals(expected, StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task<UpdateResult> GetRemoteVersion(DownloadService downloadHandle, ECoreType type, bool preRelease)

@@ -50,7 +50,7 @@ public class DownloadService
             UpdateCompleted?.Invoke(this, new UpdateResult(false, $"{ResUI.Downloading}   {url}"));
 
             var progress = new Progress<double>();
-            progress.ProgressChanged += (sender, value) => UpdateCompleted?.Invoke(this, new UpdateResult(value > 100, $"...{value}%"));
+            progress.ProgressChanged += (sender, value) => UpdateCompleted?.Invoke(this, new UpdateResult(false, $"...{value}%"));
 
             var webProxy = await GetWebProxy(blProxy);
             await DownloaderHelper.Instance.DownloadFileAsync(webProxy,
@@ -58,6 +58,7 @@ public class DownloadService
                 fileName,
                 progress,
                 downloadTimeout);
+            UpdateCompleted?.Invoke(this, new UpdateResult(true, $"...100%"));
         }
         catch (Exception ex)
         {

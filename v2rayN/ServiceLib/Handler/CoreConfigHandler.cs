@@ -25,6 +25,11 @@ public static class CoreConfigHandler
         {
             result = new CoreConfigSingboxService(context).GenerateClientConfigContent();
         }
+        else if (context.RunCoreType == ECoreType.mihomo_cmcc)
+        {
+            result = await new CoreConfigClashService(config).GenerateClientCmccConfig(node, fileName);
+            return result;
+        }
         else
         {
             result = new CoreConfigV2rayService(context).GenerateClientConfigContent();
@@ -135,6 +140,10 @@ public static class CoreConfigHandler
         if (context.RunCoreType == ECoreType.sing_box)
         {
             result = new CoreConfigSingboxService(context).GenerateClientSpeedtestConfig(port);
+        }
+        else if (context.RunCoreType == ECoreType.mihomo_cmcc)
+        {
+            return await new CoreConfigClashService(config).GenerateClientCmccConfig(context.Node, fileName, port);
         }
         else
         {

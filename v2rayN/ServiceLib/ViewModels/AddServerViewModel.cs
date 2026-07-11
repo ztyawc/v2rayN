@@ -54,6 +54,9 @@ public class AddServerViewModel : MyReactiveObject
     public string SsMethod { get; set; }
 
     [Reactive]
+    public string CmccAuthMethod { get; set; }
+
+    [Reactive]
     public string WgPublicKey { get; set; }
 
     [Reactive]
@@ -304,6 +307,11 @@ public class AddServerViewModel : MyReactiveObject
         VmessSecurity = protocolExtra.VmessSecurity?.IsNullOrEmpty() == false ? protocolExtra.VmessSecurity : Global.DefaultSecurity;
         VlessEncryption = protocolExtra.VlessEncryption?.IsNullOrEmpty() == false ? protocolExtra.VlessEncryption : Global.None;
         SsMethod = protocolExtra.SsMethod ?? string.Empty;
+        CmccAuthMethod = CmccSocksFmt.NormalizeAuthMethod(protocolExtra.CmccAuthMethod);
+        if (CmccAuthMethod.IsNullOrEmpty())
+        {
+            CmccAuthMethod = CmccSocksFmt.DefaultAuthMethod;
+        }
         WgPublicKey = protocolExtra.WgPublicKey ?? string.Empty;
         WgPresharedKey = protocolExtra.WgPresharedKey ?? string.Empty;
         WgInterfaceAddress = protocolExtra.WgInterfaceAddress ?? string.Empty;
@@ -364,7 +372,13 @@ public class AddServerViewModel : MyReactiveObject
                 return;
             }
         }
-        if (SelectedSource.ConfigType is not EConfigType.SOCKS and not EConfigType.HTTP)
+        if (SelectedSource.ConfigType == EConfigType.CmccSocks
+            && (SelectedSource.Username.IsNullOrEmpty() || SelectedSource.Password.IsNullOrEmpty()))
+        {
+            NoticeManager.Instance.Enqueue(ResUI.CheckServerSettings);
+            return;
+        }
+        if (SelectedSource.ConfigType is not EConfigType.SOCKS and not EConfigType.HTTP and not EConfigType.CmccSocks)
         {
             if (SelectedSource.Password.IsNullOrEmpty())
             {
@@ -387,7 +401,9 @@ public class AddServerViewModel : MyReactiveObject
             NoticeManager.Instance.Enqueue(ResUI.InvalidHttpOutboundHeaders);
             return;
         }
-        SelectedSource.CoreType = CoreType.IsNullOrEmpty() ? null : Enum.Parse<ECoreType>(CoreType);
+        SelectedSource.CoreType = SelectedSource.ConfigType == EConfigType.CmccSocks
+            ? ECoreType.mihomo_cmcc
+            : CoreType.IsNullOrEmpty() ? null : Enum.Parse<ECoreType>(CoreType);
         SelectedSource.AllowInsecure = AllowInsecure ? Global.StringTrue : Global.StringFalse;
         SelectedSource.MuxEnabled = MuxEnabled;
         SelectedSource.Cert = Cert.IsNullOrEmpty() ? string.Empty : Cert;
@@ -424,6 +440,9 @@ public class AddServerViewModel : MyReactiveObject
             VmessSecurity = VmessSecurity.NullIfEmpty(),
             VlessEncryption = VlessEncryption.NullIfEmpty(),
             SsMethod = SsMethod.NullIfEmpty(),
+            CmccAuthMethod = SelectedSource.ConfigType == EConfigType.CmccSocks
+                ? CmccSocksFmt.NormalizeAuthMethod(CmccAuthMethod).NullIfEmpty()
+                : SelectedSource.GetProtocolExtra().CmccAuthMethod,
             HttpHeaders = SelectedSource.ConfigType == EConfigType.HTTP ? HttpHeadersJson.NullIfEmpty() : null,
             WgPublicKey = WgPublicKey.NullIfEmpty(),
             WgPresharedKey = WgPresharedKey.NullIfEmpty(),

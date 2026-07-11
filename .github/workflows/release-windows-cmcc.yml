@@ -1,0 +1,168 @@
+name: Release Windows 10 x64 CMCC
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Optional cmcc-v2rayn-<current commit> tag override
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: windows-cmcc-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      OUTPUT_DIR: ${{ github.workspace }}\stage\v2rayN-windows-64
+      PACKAGE_FILE: v2rayN-windows-64-cmcc.zip
+    steps:
+      - name: Check out v2rayN fork
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v5.4.0
+        with:
+          dotnet-version: 10.0.1xx
+
+      - name: Test ServiceLib
+        shell: pwsh
+        run: dotnet test .\v2rayN\ServiceLib.Tests\ServiceLib.Tests.csproj -c Release
+
+      - name: Restore official core bundle
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          Invoke-WebRequest `
+            -Uri "https://github.com/2dust/v2rayN-core-bin/raw/refs/heads/master/v2rayN-windows-64.zip" `
+            -OutFile "$env:RUNNER_TEMP\v2rayN-core.zip"
+          Expand-Archive "$env:RUNNER_TEMP\v2rayN-core.zip" "${{ github.workspace }}\stage"
+
+      - name: Download verified CMCC Mihomo core
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $headers = @{
+            Accept = "application/vnd.github+json"
+            "X-GitHub-Api-Version" = "2022-11-28"
+          }
+          $releases = Invoke-RestMethod `
+            -Headers $headers `
+            -Uri "https://api.github.com/repos/ztyawc/mihomo/releases?per_page=20"
+          $release = $releases |
+            Where-Object { $_.prerelease -and $_.tag_name.StartsWith("cmcc-alpha-") } |
+            Select-Object -First 1
+          if (-not $release) { throw "No CMCC Mihomo prerelease found" }
+          $tagMatch = [regex]::Match(
+            $release.tag_name,
+            '^cmcc-alpha-([0-9a-f]{12})$',
+            [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+          if (-not $tagMatch.Success) { throw "Invalid CMCC Mihomo release tag: $($release.tag_name)" }
+          $buildId = $tagMatch.Groups[1].Value
+
+          $asset = $release.assets |
+            Where-Object { $_.name -eq "mihomo-windows-amd64-v1-cmcc.zip" } |
+            Select-Object -First 1
+          if (-not $asset -or -not $asset.digest.StartsWith("sha256:")) {
+            throw "CMCC Mihomo asset or SHA-256 digest is missing"
+          }
+
+          $archive = "$env:RUNNER_TEMP\mihomo-cmcc.zip"
+          Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $archive
+          $actual = (Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          $expected = $asset.digest.Substring("sha256:".Length).ToLowerInvariant()
+          if ($actual -ne $expected) { throw "CMCC Mihomo SHA-256 mismatch" }
+
+          $extract = "$env:RUNNER_TEMP\mihomo-cmcc"
+          Expand-Archive $archive $extract
+          $binary = Get-ChildItem $extract -Recurse -Filter "*.exe" | Select-Object -First 1
+          if (-not $binary) { throw "CMCC Mihomo executable not found" }
+          $version = (& $binary.FullName -v) -join "`n"
+          $versionMatch = [regex]::Match(
+            $version,
+            '-cmcc\.([0-9a-f]{12})',
+            [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+          if (-not $versionMatch.Success) {
+            throw "Downloaded Mihomo does not advertise CMCC capability: $version"
+          }
+          if ($versionMatch.Groups[1].Value -ne $buildId) {
+            throw "CMCC Mihomo release tag and binary build do not match"
+          }
+
+          $target = Join-Path $env:OUTPUT_DIR "bin\mihomo_cmcc"
+          New-Item -ItemType Directory -Force $target | Out-Null
+          Copy-Item $binary.FullName (Join-Path $target "mihomo.exe") -Force
+          Set-Content -Path (Join-Path $target "source.txt") -Value @(
+            "release=$($release.tag_name)",
+            "commit=$buildId",
+            "sha256=$actual"
+          )
+
+      - name: Publish v2rayN WPF x64
+        shell: pwsh
+        run: |
+          dotnet publish .\v2rayN\v2rayN\v2rayN.csproj `
+            -c Release -r win-x64 -p:SelfContained=true -p:EnableWindowsTargeting=true `
+            -o $env:OUTPUT_DIR
+          dotnet publish .\v2rayN\AmazTool\AmazTool.csproj `
+            -c Release -r win-x64 -p:SelfContained=true -p:PublishTrimmed=true `
+            -p:EnableWindowsTargeting=true -o $env:OUTPUT_DIR
+          $buildId = "${{ github.sha }}".Substring(0, 12).ToLowerInvariant()
+          Set-Content -Path (Join-Path $env:OUTPUT_DIR "cmcc-build.txt") -Value $buildId
+
+      - name: Package Windows 10 x64 release
+        shell: pwsh
+        run: |
+          Compress-Archive `
+            -Path "$env:OUTPUT_DIR\*" `
+            -DestinationPath "${{ github.workspace }}\$env:PACKAGE_FILE" `
+            -CompressionLevel Optimal `
+            -Force
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: v2rayN-windows-64-cmcc
+          path: ${{ env.PACKAGE_FILE }}
+          if-no-files-found: error
+
+      - name: Publish CMCC release
+        if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG_INPUT: ${{ inputs.release_tag }}
+        run: |
+          $buildId = "${{ github.sha }}".Substring(0, 12).ToLowerInvariant()
+          $releaseTag = $env:RELEASE_TAG_INPUT.Trim()
+          if (-not $releaseTag) { $releaseTag = "cmcc-v2rayn-$buildId" }
+          $tagMatch = [regex]::Match(
+            $releaseTag,
+            '^cmcc-v2rayn-([0-9a-f]{12})$',
+            [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+          if (-not $tagMatch.Success -or $tagMatch.Groups[1].Value -ne $buildId) {
+            throw "Release tag must be cmcc-v2rayn-$buildId"
+          }
+          if (gh release view "$releaseTag" 2>$null) {
+            gh release upload "$releaseTag" "$env:PACKAGE_FILE" --clobber
+            gh release edit "$releaseTag" `
+              --title "v2rayN $releaseTag CMCC" `
+              --notes "Windows 10 x64 WPF build with verified ztyawc/mihomo CMCC core." `
+              --latest
+          }
+          else {
+            gh release create "$releaseTag" "$env:PACKAGE_FILE" `
+              --target "${{ github.sha }}" `
+              --title "v2rayN $releaseTag CMCC" `
+              --notes "Windows 10 x64 WPF build with verified ztyawc/mihomo CMCC core." `
+              --latest
+          }

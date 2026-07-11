@@ -62,6 +62,18 @@ public partial class AddServerWindow
                 txtHttpHeadersJson.Visibility = Visibility.Visible;
                 break;
 
+            case EConfigType.CmccSocks:
+                gridSocks.Visibility = Visibility.Visible;
+                labCmccAuthMethod.Visibility = Visibility.Visible;
+                cmbCmccAuthMethod.Visibility = Visibility.Visible;
+                cmbCmccAuthMethod.ItemsSource = new[] { "0x80", "0x82" };
+                cmbCoreType.IsEnabled = false;
+                sepa2.Visibility = Visibility.Collapsed;
+                gridTransport.Visibility = Visibility.Collapsed;
+                gridTls.Visibility = Visibility.Collapsed;
+                gridFinalmask.Visibility = Visibility.Collapsed;
+                break;
+
             case EConfigType.VLESS:
                 gridVLESS.Visibility = Visibility.Visible;
                 lstStreamSecurity.Add(Global.StreamSecurityReality);
@@ -160,6 +172,12 @@ public partial class AddServerWindow
                     this.Bind(ViewModel, vm => vm.SelectedSource.Password, v => v.txtId4.Text).DisposeWith(disposables);
                     this.Bind(ViewModel, vm => vm.SelectedSource.Username, v => v.txtSecurity4.Text).DisposeWith(disposables);
                     this.Bind(ViewModel, vm => vm.HttpHeadersJson, v => v.txtHttpHeadersJson.Text).DisposeWith(disposables);
+                    break;
+
+                case EConfigType.CmccSocks:
+                    this.Bind(ViewModel, vm => vm.SelectedSource.Password, v => v.txtId4.Text).DisposeWith(disposables);
+                    this.Bind(ViewModel, vm => vm.SelectedSource.Username, v => v.txtSecurity4.Text).DisposeWith(disposables);
+                    this.Bind(ViewModel, vm => vm.CmccAuthMethod, v => v.cmbCmccAuthMethod.Text).DisposeWith(disposables);
                     break;
 
                 case EConfigType.VLESS:
