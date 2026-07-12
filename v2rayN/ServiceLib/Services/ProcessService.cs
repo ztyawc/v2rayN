@@ -4,6 +4,7 @@ public class ProcessService : IDisposable
 {
     private readonly Process _process;
     private readonly Func<bool, string, Task>? _updateFunc;
+    private readonly List<ProcessService> _ownedProcesses = [];
     private bool _isDisposed;
 
     public int Id => _process.Id;
@@ -72,47 +73,58 @@ public class ProcessService : IDisposable
 
     public async Task StopAsync()
     {
-        if (_process.HasExited)
-        {
-            return;
-        }
-
         try
         {
-            if (_process.StartInfo.RedirectStandardOutput)
+            if (!_process.HasExited)
             {
+                if (_process.StartInfo.RedirectStandardOutput)
+                {
+                    try
+                    {
+                        _process.CancelOutputRead();
+                    }
+                    catch { }
+                    try
+                    {
+                        _process.CancelErrorRead();
+                    }
+                    catch { }
+                }
+
                 try
                 {
-                    _process.CancelOutputRead();
+                    if (Utils.IsNonWindows())
+                    {
+                        _process.Kill(true);
+                    }
                 }
                 catch { }
+
                 try
                 {
-                    _process.CancelErrorRead();
+                    _process.Kill();
                 }
                 catch { }
+
+                await Task.Delay(100);
             }
 
-            try
+            foreach (var process in _ownedProcesses.AsEnumerable().Reverse())
             {
-                if (Utils.IsNonWindows())
-                {
-                    _process.Kill(true);
-                }
+                await process.StopAsync();
             }
-            catch { }
-
-            try
-            {
-                _process.Kill();
-            }
-            catch { }
-
-            await Task.Delay(100);
         }
         catch (Exception ex)
         {
             await _updateFunc?.Invoke(true, ex.Message);
+        }
+    }
+
+    public void AttachOwnedProcess(ProcessService process)
+    {
+        if (process != this && !_ownedProcesses.Contains(process))
+        {
+            _ownedProcesses.Add(process);
         }
     }
 
@@ -168,6 +180,11 @@ public class ProcessService : IDisposable
             }
 
             _process.Dispose();
+            foreach (var process in _ownedProcesses.AsEnumerable().Reverse())
+            {
+                process.Dispose();
+            }
+            _ownedProcesses.Clear();
         }
         catch (Exception ex)
         {

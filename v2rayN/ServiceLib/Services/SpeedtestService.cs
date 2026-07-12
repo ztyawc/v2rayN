@@ -187,10 +187,19 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
     private async Task RunRealPingBatchAsync(List<ServerTestItem> lstSelected, string exitLoopKey, int pageSize = 0)
     {
         var cmccItems = lstSelected.Where(x => x.ConfigType == EConfigType.CmccSocks).ToList();
+        foreach (var item in lstSelected.Where(x => x.ConfigType.IsComplexType()))
+        {
+            var buildResult = await CoreConfigContextBuilder.BuildAll(_config, item.Profile);
+            if (buildResult.Success && buildResult.FrontProxyResult is not null)
+            {
+                cmccItems.Add(item);
+            }
+        }
         if (cmccItems.Count > 0)
         {
             await RunMixedTestAsync(cmccItems, _config.SpeedTestItem.MixedConcurrencyCount, false, exitLoopKey);
-            lstSelected = lstSelected.Where(x => x.ConfigType != EConfigType.CmccSocks).ToList();
+            var cmccIds = cmccItems.Select(x => x.IndexId).ToHashSet();
+            lstSelected = lstSelected.Where(x => !cmccIds.Contains(x.IndexId)).ToList();
         }
         if (lstSelected.Count == 0)
         {

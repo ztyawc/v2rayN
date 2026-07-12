@@ -130,6 +130,24 @@ internal static class CoreConfigTestFactory
         };
     }
 
+    public static ProfileItem CreateCmccSocksNode(string indexId = "node-cmcc-1", string remarks = "demo-cmcc")
+    {
+        var node = new ProfileItem
+        {
+            IndexId = indexId,
+            ConfigType = EConfigType.CmccSocks,
+            CoreType = ECoreType.mihomo_cmcc,
+            Remarks = remarks,
+            Address = "192.0.2.10",
+            Port = 10800,
+            Username = "1234567890123456789",
+            Password = "secret",
+            Subid = string.Empty,
+        };
+        node.SetProtocolExtra(new ProtocolExtraItem { CmccAuthMethod = "0x80" });
+        return node;
+    }
+
     public static ProfileItem CreateHttpNode(ECoreType coreType, string indexId = "node-http-1",
         string remarks = "demo-http")
     {

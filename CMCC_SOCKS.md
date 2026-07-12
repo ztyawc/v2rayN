@@ -7,7 +7,7 @@ This fork adds the private SOCKS5 variant described in the accompanying protocol
 - Windows 10 x64, WPF build.
 - Authentication methods `0x80` and `0x82`.
 - TCP proxying through the maintained [`ztyawc/mihomo`](https://github.com/ztyawc/mihomo) fork.
-- System proxy, Mihomo mixed inbound, TUN startup, sharing/import, and per-node delay/speed tests.
+- System proxy, Mihomo mixed inbound, TUN startup, sharing/import, per-node delay/speed tests, and use as the first hop of a Proxy Chain.
 - UDP remains disabled in v2rayN. The Mihomo fork contains experimental UDP support, but it is not part of this release's compatibility promise.
 
 Use **Servers → CMCC SOCKS**, then enter the server, port, username, password, and authentication method. The core selector is intentionally locked: these nodes can only use `mihomo_cmcc`.
@@ -19,6 +19,18 @@ cmcc://username:password@server:port?method=0x80#remark
 ```
 
 Provider-style links using `usr`, `passwd`, and `protocol` query parameters are also accepted. A provider link without a method defaults to `0x80` and should be checked before connecting.
+
+## Using CMCC SOCKS as a front proxy
+
+Create a **Proxy Chain** and put the CMCC SOCKS node first. Put the node that should reach the destination after it in the second position:
+
+```text
+local traffic -> CMCC SOCKS -> exit node -> destination
+```
+
+The exit node may use Xray or sing-box. v2rayN starts a loopback-only CMCC Mihomo helper first, waits for its temporary SOCKS port, replaces the CMCC hop with that local port in the main core configuration, and then starts the main chain. The helper has no LAN listener or Clash API listener and is stopped together with the main core.
+
+Only one distinct CMCC SOCKS helper is supported in an active configuration. A CMCC node placed later in a chain, or directly inside a policy group without being the first hop of its own Proxy Chain, is rejected with a validation error. Standalone CMCC nodes continue to run directly on `mihomo_cmcc`.
 
 ## Core delivery and updates
 

@@ -12,6 +12,7 @@ public class CoreManager
     private WindowsJobService? _processJob;
     private ProcessService? _processService;
     private ProcessService? _processPreService;
+    private ProcessService? _processFrontService;
     private bool _linuxSudo = false;
     private Func<bool, string, Task>? _updateFunc;
     private const string _tag = "CoreHandler";
@@ -60,7 +61,9 @@ public class CoreManager
 
     /// <param name="mainContext">Resolved main context (with pre-socks ports already merged if applicable).</param>
     /// <param name="preContext">Optional pre-socks context passed to <see cref="CoreStartPreService"/>.</param>
-    public async Task LoadCore(CoreConfigContext? mainContext, CoreConfigContext? preContext)
+    /// <param name="frontProxyContext">Optional CMCC helper core that must start before the main core.</param>
+    public async Task LoadCore(CoreConfigContext? mainContext, CoreConfigContext? preContext,
+        CoreConfigContext? frontProxyContext = null)
     {
         if (mainContext == null)
         {
@@ -89,7 +92,17 @@ public class CoreManager
             await WindowsUtils.RemoveTunDevice();
         }
 
+        if (!await CoreStartFrontService(frontProxyContext))
+        {
+            return;
+        }
+
         await CoreStart(mainContext);
+        if (_processService is null)
+        {
+            await CoreStop();
+            return;
+        }
         await WaitForProxyPort(preContext);
         await CoreStartPreService(preContext);
 
@@ -103,7 +116,7 @@ public class CoreManager
 
     public async Task<ProcessService?> LoadCoreConfigSpeedtest(List<ServerTestItem> selecteds)
     {
-        if (selecteds.Count == 1 && selecteds[0].ConfigType == EConfigType.CmccSocks)
+        if (selecteds.Count == 1)
         {
             return await LoadCoreConfigSpeedtest(selecteds[0]);
         }
@@ -135,16 +148,49 @@ public class CoreManager
 
         var fileName = string.Format(Global.CoreSpeedtestConfigFileName, Utils.GetGuid(false));
         var configPath = Utils.GetBinConfigPath(fileName);
-        var (context, _) = await CoreConfigContextBuilder.Build(_config, node);
+        var allResult = await CoreConfigContextBuilder.BuildAll(_config, node);
+        if (!allResult.Success)
+        {
+            await UpdateFunc(true, string.Join(Environment.NewLine, allResult.CombinedValidatorResult.Errors));
+            return null;
+        }
+
+        var context = allResult.MainResult.Context;
         var result = await CoreConfigHandler.GenerateClientSpeedtestConfig(_config, context, testItem, configPath);
         if (result.Success != true)
         {
             return null;
         }
 
+        ProcessService? frontProcess = null;
+        if (allResult.FrontProxyResult is not null)
+        {
+            var frontFileName = string.Format(Global.CoreSpeedtestFrontConfigFileName, Utils.GetGuid(false));
+            var frontStart = await StartFrontService(allResult.FrontProxyResult.Context, frontFileName);
+            if (!frontStart.Success)
+            {
+                return null;
+            }
+            frontProcess = frontStart.Process;
+        }
+
         var coreType = context.RunCoreType;
         var coreInfo = CoreInfoManager.Instance.GetCoreInfo(coreType);
-        return await RunProcess(coreInfo, fileName, true, false);
+        var process = await RunProcess(coreInfo, fileName, true, false);
+        if (process is null)
+        {
+            if (frontProcess is not null)
+            {
+                await frontProcess.StopAsync();
+                frontProcess.Dispose();
+            }
+            return null;
+        }
+        if (frontProcess is not null)
+        {
+            process.AttachOwnedProcess(frontProcess);
+        }
+        return process;
     }
 
     public async Task CoreStop()
@@ -169,6 +215,13 @@ public class CoreManager
                 await _processPreService.StopAsync();
                 _processPreService.Dispose();
                 _processPreService = null;
+            }
+
+            if (_processFrontService != null)
+            {
+                await _processFrontService.StopAsync();
+                _processFrontService.Dispose();
+                _processFrontService = null;
             }
         }
         catch (Exception ex)
@@ -204,6 +257,54 @@ public class CoreManager
 
         var output = await Utils.GetCliWrapOutput(fileName, coreInfo?.VersionArg ?? "-v");
         return Regex.IsMatch(output ?? string.Empty, @"-cmcc\.[0-9a-f]{12}\b", RegexOptions.IgnoreCase);
+    }
+
+    private async Task<bool> CoreStartFrontService(CoreConfigContext? frontContext)
+    {
+        var result = await StartFrontService(frontContext, Global.CoreFrontConfigFileName);
+        _processFrontService = result.Process;
+        return result.Success;
+    }
+
+    private async Task<(bool Success, ProcessService? Process)> StartFrontService(
+        CoreConfigContext? frontContext, string configFileName)
+    {
+        if (frontContext is null)
+        {
+            return (true, null);
+        }
+
+        var localPort = frontContext.InboundPortOverride;
+        if (localPort is not (> 0 and <= 65535))
+        {
+            await UpdateFunc(true, "The CMCC SOCKS front-proxy port is invalid.");
+            return (false, null);
+        }
+
+        var fileName = Utils.GetBinConfigPath(configFileName);
+        var result = await CoreConfigHandler.GenerateClientConfig(frontContext, fileName);
+        if (!result.Success)
+        {
+            await UpdateFunc(true, result.Msg);
+            return (false, null);
+        }
+
+        var coreInfo = CoreInfoManager.Instance.GetCoreInfo(frontContext.RunCoreType);
+        var process = await RunProcess(coreInfo, configFileName, true, false);
+        if (process is null)
+        {
+            return (false, null);
+        }
+
+        if (await WaitForSocksPort(localPort.Value))
+        {
+            return (true, process);
+        }
+
+        await UpdateFunc(true, "The CMCC SOCKS front proxy did not become ready in time.");
+        await process.StopAsync();
+        process.Dispose();
+        return (false, null);
     }
 
     private async Task CoreStartPreService(CoreConfigContext? preContext)
@@ -242,10 +343,13 @@ public class CoreManager
             return;
         }
 
+        await WaitForSocksPort(preContext.Node.Port, timeoutMs);
+    }
+
+    private static async Task<bool> WaitForSocksPort(int port, int timeoutMs = 5000)
+    {
         using var rootCts = new CancellationTokenSource(TimeSpan.FromMilliseconds(timeoutMs));
         var rootToken = rootCts.Token;
-
-        var port = preContext.Node.Port;
         // SOCKS5 client greeting: VER=5, NMETHODS=1, METHOD=0x00 (no auth)
         ReadOnlyMemory<byte> greeting = new byte[] { 0x05, 0x01, 0x00 };
         var buf = new byte[2];
@@ -268,7 +372,7 @@ public class CoreManager
                 // Server selection: VER=5, METHOD=0x00 — proxy is fully ready
                 if (read == 2 && buf[0] == 0x05)
                 {
-                    return;
+                    return true;
                 }
             }
             catch (OperationCanceledException)
@@ -278,7 +382,7 @@ public class CoreManager
                     continue;
                 }
                 Logging.SaveLog($"WaitForProxyPort Timeout waiting for proxy port {port} to be ready.");
-                return;
+                return false;
             }
             catch (SocketException ex) when (ex.SocketErrorCode == SocketError.ConnectionRefused)
             {
@@ -290,7 +394,7 @@ public class CoreManager
                 catch (OperationCanceledException)
                 {
                     Logging.SaveLog($"WaitForProxyPort Timeout waiting for proxy port {port} to be ready.");
-                    return;
+                    return false;
                 }
             }
             catch
@@ -298,6 +402,7 @@ public class CoreManager
                 // Ignore other exceptions and continue
             }
         }
+        return false;
     }
 
     #endregion Private
