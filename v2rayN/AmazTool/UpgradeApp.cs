@@ -44,9 +44,9 @@ internal class UpgradeApp
         {
             var thisAppOldFile = $"{Utils.GetExePath()}.tmp";
             File.Delete(thisAppOldFile);
-            var splitKey = "/";
 
             using var archive = ZipFile.OpenRead(fileName);
+            var archiveRoot = GetArchiveRoot(archive);
             foreach (var entry in archive.Entries)
             {
                 try
@@ -58,28 +58,37 @@ internal class UpgradeApp
 
                     Console.WriteLine(entry.FullName);
 
-                    var lst = entry.FullName.Split(splitKey);
-                    if (lst.Length == 1)
+                    var fullName = GetRelativeEntryName(entry.FullName, archiveRoot);
+                    if (string.IsNullOrEmpty(fullName))
                     {
                         continue;
                     }
 
-                    var fullName = string.Join(splitKey, lst[1..lst.Length]);
+                    var entryOutputPath = GetSafeOutputPath(fullName);
+                    if (entryOutputPath is null)
+                    {
+                        sb.AppendLine($"Unsafe archive entry: {entry.FullName}");
+                        continue;
+                    }
 
-                    if (string.Equals(Utils.GetExePath(), Utils.GetPath(fullName), StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(Utils.GetExePath(), entryOutputPath, StringComparison.OrdinalIgnoreCase))
                     {
                         File.Move(Utils.GetExePath(), thisAppOldFile);
                     }
 
-                    var entryOutputPath = Utils.GetPath(fullName);
                     Directory.CreateDirectory(Path.GetDirectoryName(entryOutputPath)!);
                     //In the bin folder, if the file already exists, it will be skipped
-                    if (fullName.StartsWith("bin") && File.Exists(entryOutputPath))
+                    if (fullName.StartsWith("bin/", StringComparison.OrdinalIgnoreCase)
+                        && File.Exists(entryOutputPath))
                     {
                         continue;
                     }
 
-                    TryExtractToFile(entry, entryOutputPath);
+                    if (!TryExtractToFile(entry, entryOutputPath))
+                    {
+                        sb.AppendLine($"Failed to extract: {entry.FullName}");
+                        continue;
+                    }
 
                     Console.WriteLine(entryOutputPath);
                 }
@@ -104,6 +113,52 @@ internal class UpgradeApp
         Utils.Waiting(2);
 
         Utils.StartV2RayN();
+    }
+
+    internal static string? GetArchiveRoot(ZipArchive archive)
+    {
+        var paths = archive.Entries
+            .Where(entry => entry.Length > 0)
+            .Select(entry => entry.FullName.Replace('\\', '/').TrimStart('/'))
+            .Where(path => !string.IsNullOrEmpty(path))
+            .ToList();
+        if (paths.Count == 0 || paths.Any(path => !path.Contains('/')))
+        {
+            return null;
+        }
+
+        var roots = paths
+            .Select(path => path[..path.IndexOf('/')])
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        return roots.Count == 1 ? roots[0] : null;
+    }
+
+    internal static string GetRelativeEntryName(string entryName, string? archiveRoot)
+    {
+        var normalized = entryName.Replace('\\', '/').TrimStart('/');
+        if (string.IsNullOrEmpty(archiveRoot))
+        {
+            return normalized;
+        }
+
+        var rootPrefix = $"{archiveRoot}/";
+        return normalized.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase)
+            ? normalized[rootPrefix.Length..]
+            : normalized;
+    }
+
+    internal static string? GetSafeOutputPath(string relativePath)
+    {
+        var startupPath = Path.GetFullPath(Utils.StartupPath());
+        var startupPrefix = startupPath.EndsWith(Path.DirectorySeparatorChar)
+            ? startupPath
+            : startupPath + Path.DirectorySeparatorChar;
+        var outputPath = Path.GetFullPath(Path.Combine(startupPath,
+            relativePath.Replace('/', Path.DirectorySeparatorChar)));
+        return outputPath.StartsWith(startupPrefix, StringComparison.OrdinalIgnoreCase)
+            ? outputPath
+            : null;
     }
 
     private static bool TryExtractToFile(ZipArchiveEntry entry, string outputPath)

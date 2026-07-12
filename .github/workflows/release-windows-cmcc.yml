@@ -122,11 +122,39 @@ jobs:
       - name: Package Windows 10 x64 release
         shell: pwsh
         run: |
+          $ErrorActionPreference = "Stop"
+          $packageRoot = Join-Path "${{ github.workspace }}\package" "v2rayN-windows-64-cmcc"
+          Remove-Item (Split-Path $packageRoot) -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force $packageRoot | Out-Null
+          Copy-Item "$env:OUTPUT_DIR\*" $packageRoot -Recurse -Force
           Compress-Archive `
-            -Path "$env:OUTPUT_DIR\*" `
+            -Path $packageRoot `
             -DestinationPath "${{ github.workspace }}\$env:PACKAGE_FILE" `
             -CompressionLevel Optimal `
             -Force
+
+          $archive = [System.IO.Compression.ZipFile]::OpenRead(
+            "${{ github.workspace }}\$env:PACKAGE_FILE")
+          try {
+            $entries = $archive.Entries.FullName
+            $required = @(
+              "v2rayN-windows-64-cmcc/v2rayN.exe",
+              "v2rayN-windows-64-cmcc/AmazTool.exe",
+              "v2rayN-windows-64-cmcc/cmcc-build.txt",
+              "v2rayN-windows-64-cmcc/bin/mihomo_cmcc/mihomo.exe"
+            )
+            foreach ($entry in $required) {
+              if ($entries -notcontains $entry) {
+                throw "Release archive is incompatible with AmazTool; missing $entry"
+              }
+            }
+            if ($entries -contains "v2rayN.exe" -or $entries -contains "bin/xray/xray.exe") {
+              throw "Release archive was flattened and cannot be installed by AmazTool"
+            }
+          }
+          finally {
+            $archive.Dispose()
+          }
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v7
