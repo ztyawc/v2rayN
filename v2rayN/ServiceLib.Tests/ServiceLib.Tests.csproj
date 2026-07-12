@@ -17,6 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\AmazTool\AmazTool.csproj" />
     <ProjectReference Include="..\ServiceLib\ServiceLib.csproj" />
   </ItemGroup>
 

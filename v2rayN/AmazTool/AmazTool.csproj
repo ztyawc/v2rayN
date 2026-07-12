@@ -5,6 +5,8 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<InternalsVisibleTo Include="ServiceLib.Tests" />
+
 		<EmbeddedResource Update="Resx\Resource.resx">
 			<Generator>ResXFileCodeGenerator</Generator>
 			<LastGenOutput>Resource.Designer.cs</LastGenOutput>
