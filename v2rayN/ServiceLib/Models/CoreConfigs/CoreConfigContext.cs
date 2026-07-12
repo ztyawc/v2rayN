@@ -11,6 +11,9 @@ public record CoreConfigContext
     public Config AppConfig { get; init; } = new();
     public FullConfigTemplateItem? FullConfigTemplate { get; init; } = new();
 
+    // Optional local inbound used when a helper core exposes a cross-core front proxy.
+    public int? InboundPortOverride { get; init; }
+
     // Test ServerTestItem Map
     public Dictionary<string, string> ServerTestItemMap { get; init; } = new();
 

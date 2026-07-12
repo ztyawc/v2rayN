@@ -11,18 +11,29 @@ public record CoreConfigContextBuilderResult(CoreConfigContext Context, NodeVali
 /// </summary>
 public record CoreConfigContextBuilderAllResult(
     CoreConfigContextBuilderResult MainResult,
-    CoreConfigContextBuilderResult? PreSocksResult)
+    CoreConfigContextBuilderResult? PreSocksResult,
+    CoreConfigContextBuilderResult? FrontProxyResult)
 {
     /// <summary>True only when both the main result and (if present) the pre-socks result succeeded.</summary>
-    public bool Success => MainResult.Success && (PreSocksResult?.Success ?? true);
+    public bool Success => MainResult.Success
+        && (PreSocksResult?.Success ?? true)
+        && (FrontProxyResult?.Success ?? true);
 
     /// <summary>
     ///     Merges all errors and warnings from the main result and the optional pre-socks result
     ///     into a single <see cref="NodeValidatorResult" /> for unified notification.
     /// </summary>
     public NodeValidatorResult CombinedValidatorResult => new(
-        [.. MainResult.ValidatorResult.Errors, .. PreSocksResult?.ValidatorResult.Errors ?? []],
-        [.. MainResult.ValidatorResult.Warnings, .. PreSocksResult?.ValidatorResult.Warnings ?? []]);
+        [
+            .. MainResult.ValidatorResult.Errors,
+            .. PreSocksResult?.ValidatorResult.Errors ?? [],
+            .. FrontProxyResult?.ValidatorResult.Errors ?? []
+        ],
+        [
+            .. MainResult.ValidatorResult.Warnings,
+            .. PreSocksResult?.ValidatorResult.Warnings ?? [],
+            .. FrontProxyResult?.ValidatorResult.Warnings ?? []
+        ]);
 }
 
 public class CoreConfigContextBuilder
@@ -144,28 +155,36 @@ public class CoreConfigContextBuilder
         var mainResult = await Build(config, node);
         if (!mainResult.Success)
         {
-            return new CoreConfigContextBuilderAllResult(mainResult, null);
+            return new CoreConfigContextBuilderAllResult(mainResult, null, null);
         }
 
-        var preResult = await BuildPreSocksIfNeeded(mainResult.Context);
+        var (resolvedMainResult, frontProxyResult) = await BuildCmccFrontProxyIfNeeded(mainResult);
+        if (frontProxyResult is { Success: false })
+        {
+            return new CoreConfigContextBuilderAllResult(resolvedMainResult, null, frontProxyResult);
+        }
+
+        var preResult = await BuildPreSocksIfNeeded(resolvedMainResult.Context);
         if (preResult is null)
         {
-            return new CoreConfigContextBuilderAllResult(mainResult, null);
+            return new CoreConfigContextBuilderAllResult(resolvedMainResult, null, frontProxyResult);
         }
 
-        var resolvedMainResult = mainResult with
+        var mainTunEnabled = resolvedMainResult.Context.IsTunEnabled;
+        resolvedMainResult = resolvedMainResult with
         {
-            Context = mainResult.Context with
+            Context = resolvedMainResult.Context with
             {
                 IsTunEnabled = false,
                 // main core doesn't handle tun directly when pre-socks is used
-                ProtectDomainList = [.. mainResult.Context.ProtectDomainList, .. preResult.Context.ProtectDomainList],
+                ProtectDomainList =
+                [.. resolvedMainResult.Context.ProtectDomainList, .. preResult.Context.ProtectDomainList],
             },
         };
-        if (mainResult.Context.IsTunEnabled
-            && mainResult.Context.AppConfig.TunModeItem.StrictRoute)
+        if (mainTunEnabled
+            && resolvedMainResult.Context.AppConfig.TunModeItem.StrictRoute)
         {
-            var appConfig = JsonUtils.DeepCopy(mainResult.Context.AppConfig);
+            var appConfig = JsonUtils.DeepCopy(resolvedMainResult.Context.AppConfig);
             appConfig.CoreBasicItem.BindInterface = string.Empty;
             appConfig.CoreBasicItem.SendThrough = string.Empty;
             resolvedMainResult = resolvedMainResult with
@@ -176,7 +195,75 @@ public class CoreConfigContextBuilder
                 },
             };
         }
-        return new CoreConfigContextBuilderAllResult(resolvedMainResult, preResult);
+        return new CoreConfigContextBuilderAllResult(resolvedMainResult, preResult, frontProxyResult);
+    }
+
+    private static async Task<(CoreConfigContextBuilderResult MainResult,
+        CoreConfigContextBuilderResult? FrontProxyResult)> BuildCmccFrontProxyIfNeeded(
+        CoreConfigContextBuilderResult mainResult)
+    {
+        if (mainResult.Context.Node.ConfigType == EConfigType.CmccSocks)
+        {
+            return (mainResult, null);
+        }
+
+        var cmccNodes = mainResult.Context.AllProxiesMap.Values
+            .Where(x => x.ConfigType == EConfigType.CmccSocks)
+            .DistinctBy(x => x.IndexId)
+            .ToList();
+        if (cmccNodes.Count == 0)
+        {
+            return (mainResult, null);
+        }
+        if (cmccNodes.Count > 1)
+        {
+            var invalidResult = new CoreConfigContextBuilderResult(mainResult.Context,
+                new NodeValidatorResult(["Only one CMCC SOCKS front proxy is supported per configuration."], []));
+            return (mainResult, invalidResult);
+        }
+
+        var cmccNode = JsonUtils.DeepCopy(cmccNodes[0]);
+        cmccNode.Subid = string.Empty;
+        cmccNode.CoreType = ECoreType.mihomo_cmcc;
+
+        var frontConfig = JsonUtils.DeepCopy(mainResult.Context.AppConfig);
+        frontConfig.TunModeItem.EnableTun = false;
+        frontConfig.TunModeItem.EnableLegacyProtect = false;
+        var frontResult = await Build(frontConfig, cmccNode);
+        if (!frontResult.Success)
+        {
+            return (mainResult, frontResult);
+        }
+
+        // Use an ephemeral port instead of one of v2rayN's configured inbound ports. The main
+        // core may bind socks3 for LAN access after the helper starts.
+        var localPort = Utils.GetFreePort();
+        frontResult = frontResult with
+        {
+            Context = frontResult.Context with
+            {
+                InboundPortOverride = localPort,
+                IsTunEnabled = false,
+            },
+        };
+
+        var localSocksNode = new ProfileItem
+        {
+            IndexId = cmccNode.IndexId,
+            ConfigType = EConfigType.SOCKS,
+            CoreType = mainResult.Context.RunCoreType,
+            Address = Global.Loopback,
+            Port = localPort,
+            Remarks = cmccNode.Remarks,
+        };
+        var proxyMap = mainResult.Context.AllProxiesMap.ToDictionary(
+            pair => pair.Key,
+            pair => pair.Value.IndexId == cmccNode.IndexId ? localSocksNode : pair.Value);
+        mainResult = mainResult with
+        {
+            Context = mainResult.Context with { AllProxiesMap = proxyMap },
+        };
+        return (mainResult, frontResult);
     }
 
     /// <summary>
@@ -414,6 +501,15 @@ public class CoreConfigContextBuilder
         HashSet<string> ancestorsGroup)
     {
         var (groupChildList, _) = await GroupProfileManager.GetChildProfileItems(node);
+        var cmccChildren = groupChildList.Where(x => x.ConfigType == EConfigType.CmccSocks).ToList();
+        if (cmccChildren.Count > 0
+            && (node.ConfigType != EConfigType.ProxyChain
+                || cmccChildren.Count > 1
+                || groupChildList.FirstOrDefault()?.IndexId != cmccChildren[0].IndexId))
+        {
+            return new NodeValidatorResult(
+                ["CMCC SOCKS must be the first node in a proxy chain and may appear only once."], []);
+        }
         List<string> childIndexIdList = [];
         var childNodeValidatorResult = NodeValidatorResult.Empty();
         foreach (var childNode in groupChildList)
@@ -433,7 +529,9 @@ public class CoreConfigContextBuilder
 
             if (!childNode.ConfigType.IsGroupType())
             {
-                var childNodeResult = RegisterSingleNodeAsync(context, childNode);
+                var childNodeResult = childNode.ConfigType == EConfigType.CmccSocks
+                    ? RegisterSingleNodeAsync(context with { RunCoreType = ECoreType.mihomo_cmcc }, childNode)
+                    : RegisterSingleNodeAsync(context, childNode);
                 childNodeValidatorResult.Warnings.AddRange(childNodeResult.Warnings.Select(w =>
                     string.Format(ResUI.MsgGroupChildNodeWarning, node.Remarks, childNode.Remarks, w)));
                 childNodeValidatorResult.Errors.AddRange(childNodeResult.Errors.Select(e =>
