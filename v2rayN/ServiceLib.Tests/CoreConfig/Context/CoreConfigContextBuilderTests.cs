@@ -94,6 +94,55 @@ public class CoreConfigContextBuilderTests
     }
 
     [Fact]
+    public async Task BuildAll_CmccFrontWithLegacyTun_ShouldProtectMainAndFrontCores()
+    {
+        var config = CoreConfigTestFactory.CreateConfig(ECoreType.Xray);
+        config.TunModeItem.EnableTun = true;
+        config.TunModeItem.EnableLegacyProtect = true;
+        CoreConfigTestFactory.BindAppManagerConfig(config);
+
+        var cmcc = CoreConfigTestFactory.CreateCmccSocksNode(NewId("cmcc"), "cmcc-front");
+        var exit = CoreConfigTestFactory.CreateSocksNode(ECoreType.Xray, NewId("exit"), "exit-node");
+        var chain = CoreConfigTestFactory.CreateProxyChainNode(ECoreType.Xray, NewId("chain"), "chain",
+            [cmcc.IndexId, exit.IndexId]);
+        await UpsertProfilesAsync(cmcc, exit, chain);
+
+        var result = await CoreConfigContextBuilder.BuildAll(config, chain);
+
+        result.Success.Should().BeTrue(string.Join(Environment.NewLine, result.CombinedValidatorResult.Errors));
+        result.FrontProxyResult.Should().NotBeNull();
+        result.PreSocksResult.Should().NotBeNull();
+        result.PreSocksResult!.Context.RunCoreType.Should().Be(ECoreType.sing_box);
+        result.PreSocksResult.Context.IsTunEnabled.Should().BeTrue();
+        result.PreSocksResult.Context.ProtectCoreTypeList.Should().BeEquivalentTo(
+            [ECoreType.Xray, ECoreType.mihomo_cmcc]);
+        result.MainResult.Context.IsTunEnabled.Should().BeFalse();
+        result.MainResult.Context.ProtectCoreTypeList.Should().BeEquivalentTo([ECoreType.mihomo_cmcc]);
+    }
+
+    [Fact]
+    public async Task BuildAll_CmccFrontWithNativeSingboxTun_ShouldProtectFrontCore()
+    {
+        var config = CoreConfigTestFactory.CreateConfig(ECoreType.sing_box);
+        config.TunModeItem.EnableTun = true;
+        CoreConfigTestFactory.BindAppManagerConfig(config);
+
+        var cmcc = CoreConfigTestFactory.CreateCmccSocksNode(NewId("cmcc"), "cmcc-front");
+        var exit = CoreConfigTestFactory.CreateSocksNode(ECoreType.sing_box, NewId("exit"), "exit-node");
+        var chain = CoreConfigTestFactory.CreateProxyChainNode(ECoreType.sing_box, NewId("chain"), "chain",
+            [cmcc.IndexId, exit.IndexId]);
+        await UpsertProfilesAsync(cmcc, exit, chain);
+
+        var result = await CoreConfigContextBuilder.BuildAll(config, chain);
+
+        result.Success.Should().BeTrue(string.Join(Environment.NewLine, result.CombinedValidatorResult.Errors));
+        result.FrontProxyResult.Should().NotBeNull();
+        result.PreSocksResult.Should().BeNull();
+        result.MainResult.Context.IsTunEnabled.Should().BeTrue();
+        result.MainResult.Context.ProtectCoreTypeList.Should().BeEquivalentTo([ECoreType.mihomo_cmcc]);
+    }
+
+    [Fact]
     public async Task BuildAll_CmccNotFirstInProxyChain_ShouldFailValidation()
     {
         var config = CoreConfigTestFactory.CreateConfig(ECoreType.Xray);
