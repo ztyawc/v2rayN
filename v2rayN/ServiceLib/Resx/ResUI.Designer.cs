@@ -23,15 +23,15 @@ namespace ServiceLib.Resx {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
     public class ResUI {
-        
+
         private static global::System.Resources.ResourceManager resourceMan;
-        
+
         private static global::System.Globalization.CultureInfo resourceCulture;
-        
+
         [global::System.Diagnostics.CodeAnalysis.SuppressMessageAttribute("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")]
         internal ResUI() {
         }
-        
+
         /// <summary>
         ///   返回此类使用的缓存的 ResourceManager 实例。
         /// </summary>
@@ -322,20 +322,20 @@ namespace ServiceLib.Resx {
         }
         
         /// <summary>
-        ///   查找类似 Invalid Realm URL. 的本地化字符串。
-        /// </summary>
-        public static string InvalidHy2RealmUrl {
-            get {
-                return ResourceManager.GetString("InvalidHy2RealmUrl", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   查找类似 Please enter valid HTTP request headers JSON. 的本地化字符串。
         /// </summary>
         public static string InvalidHttpOutboundHeaders {
             get {
                 return ResourceManager.GetString("InvalidHttpOutboundHeaders", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 Invalid Realm URL. 的本地化字符串。
+        /// </summary>
+        public static string InvalidHy2RealmUrl {
+            get {
+                return ResourceManager.GetString("InvalidHy2RealmUrl", resourceCulture);
             }
         }
 
@@ -3232,15 +3232,6 @@ namespace ServiceLib.Resx {
         }
         
         /// <summary>
-        ///   查找类似 HTTP headers 的本地化字符串。
-        /// </summary>
-        public static string TbHttpOutboundHeaders {
-            get {
-                return ResourceManager.GetString("TbHttpOutboundHeaders", resourceCulture);
-            }
-        }
-
-        /// <summary>
         ///   查找类似 Port hopping interval 的本地化字符串。
         /// </summary>
         public static string TbHopInt7 {
@@ -3258,6 +3249,15 @@ namespace ServiceLib.Resx {
             }
         }
         
+        /// <summary>
+        ///   查找类似 HTTP headers 的本地化字符串。
+        /// </summary>
+        public static string TbHttpOutboundHeaders {
+            get {
+                return ResourceManager.GetString("TbHttpOutboundHeaders", resourceCulture);
+            }
+        }
+
         /// <summary>
         ///   查找类似 Realm URL 的本地化字符串。
         /// </summary>

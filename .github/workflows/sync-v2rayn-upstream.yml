@@ -37,9 +37,14 @@ jobs:
             echo "changed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          fork_base="$(git rev-parse HEAD)"
           branch="sync/upstream-$(git rev-parse --short=12 upstream/master)"
           git switch -C "$branch"
-          git merge --no-edit upstream/master
+          git merge --no-commit --no-ff upstream/master
+          git restore --source="$fork_base" --staged --worktree -- .github/workflows
+          GIT_EDITOR=true git commit
+          git diff --exit-code "$fork_base" HEAD -- .github/workflows
+          echo "Preserved fork-owned GitHub workflows."
           echo "branch=$branch" >> "$GITHUB_OUTPUT"
           echo "changed=true" >> "$GITHUB_OUTPUT"
 
