@@ -164,6 +164,21 @@ public class CoreConfigContextBuilder
             return new CoreConfigContextBuilderAllResult(resolvedMainResult, null, frontProxyResult);
         }
 
+        if (frontProxyResult is not null)
+        {
+            var protectCoreTypeList = new HashSet<ECoreType>(resolvedMainResult.Context.ProtectCoreTypeList)
+            {
+                frontProxyResult.Context.RunCoreType,
+            };
+            resolvedMainResult = resolvedMainResult with
+            {
+                Context = resolvedMainResult.Context with
+                {
+                    ProtectCoreTypeList = protectCoreTypeList,
+                },
+            };
+        }
+
         var preResult = await BuildPreSocksIfNeeded(resolvedMainResult.Context);
         if (preResult is null)
         {
@@ -280,12 +295,19 @@ public class CoreConfigContextBuilder
         if (preSocksItem != null)
         {
             var preSocksResult = await Build(nodeContext.AppConfig, preSocksItem);
+
+            var protectCoreTypeList = new HashSet<ECoreType>(nodeContext.ProtectCoreTypeList)
+            {
+                nodeContext.RunCoreType,
+            };
+
             return preSocksResult with
             {
                 Context = preSocksResult.Context with
                 {
                     ProtectDomainList =
                     [.. nodeContext.ProtectDomainList ?? [], .. preSocksResult.Context.ProtectDomainList ?? []],
+                    ProtectCoreTypeList = protectCoreTypeList,
                 },
             };
         }
