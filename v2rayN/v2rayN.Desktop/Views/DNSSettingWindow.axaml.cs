@@ -16,6 +16,7 @@ public partial class DNSSettingWindow : WindowBase<DNSSettingViewModel>
 
         cmbDirectDNSStrategy.ItemsSource = Global.DomainStrategy;
         cmbRemoteDNSStrategy.ItemsSource = Global.DomainStrategy;
+        cmbProxyDialDNSStrategy.ItemsSource = Global.DomainStrategy;
         cmbDirectDNS.ItemsSource = Global.DomainDirectDNSAddress;
         cmbRemoteDNS.ItemsSource = Global.DomainRemoteDNSAddress;
         cmbBootstrapDNS.ItemsSource = Global.DomainPureIPDNSAddress;
@@ -37,10 +38,12 @@ public partial class DNSSettingWindow : WindowBase<DNSSettingViewModel>
             this.Bind(ViewModel, vm => vm.BootstrapDNS, v => v.cmbBootstrapDNS.Text).DisposeWith(disposables);
             this.Bind(ViewModel, vm => vm.Strategy4Freedom, v => v.cmbDirectDNSStrategy.SelectedItem).DisposeWith(disposables);
             this.Bind(ViewModel, vm => vm.Strategy4Proxy, v => v.cmbRemoteDNSStrategy.SelectedItem).DisposeWith(disposables);
+            this.Bind(ViewModel, vm => vm.Strategy4ProxyDial, v => v.cmbProxyDialDNSStrategy.SelectedItem).DisposeWith(disposables);
             this.Bind(ViewModel, vm => vm.Hosts, v => v.txtHosts.Text).DisposeWith(disposables);
             this.Bind(ViewModel, vm => vm.DirectExpectedIPs, v => v.cmbDirectExpectedIPs.Text).DisposeWith(disposables);
             this.Bind(ViewModel, vm => vm.ParallelQuery, v => v.togParallelQuery.IsChecked).DisposeWith(disposables);
             this.Bind(ViewModel, vm => vm.ServeStale, v => v.togServeStale.IsChecked).DisposeWith(disposables);
+            this.Bind(ViewModel, vm => vm.EnableHappyEyeballs, v => v.togEnableHappyEyeballs.IsChecked).DisposeWith(disposables);
 
             this.BindCommand(ViewModel, vm => vm.SaveCmd, v => v.btnSave).DisposeWith(disposables);
 
