@@ -29,23 +29,11 @@ public class OptionSettingViewModel : MyReactiveObject, ICloseable
     [Reactive] public bool EnableFragment { get; set; }
     [Reactive] public bool EnableFinalFragment { get; set; }
     [Reactive] public string FragmentPackets { get; set; }
-    [Reactive] public string FragmentLength { get; set; }
-    [Reactive] public string FragmentInterval { get; set; }
+    [Reactive] public string FragmentLengths { get; set; }
+    [Reactive] public string FragmentDelays { get; set; }
     [Reactive] public string FragmentMaxSplit { get; set; }
 
     #endregion Core
-
-    #region Core KCP
-
-    //[Reactive] public int Kcpmtu { get; set; }
-    //[Reactive] public int Kcptti { get; set; }
-    //[Reactive] public int KcpuplinkCapacity { get; set; }
-    //[Reactive] public int KcpdownlinkCapacity { get; set; }
-    //[Reactive] public int KcpreadBufferSize { get; set; }
-    //[Reactive] public int KcpwriteBufferSize { get; set; }
-    //[Reactive] public bool Kcpcongestion { get; set; }
-
-    #endregion Core KCP
 
     #region UI
 
@@ -150,6 +138,7 @@ public class OptionSettingViewModel : MyReactiveObject, ICloseable
         SecondLocalPortEnabled = inbound.SecondLocalPortEnabled;
         UdpEnabled = inbound.UdpEnabled;
         SniffingEnabled = inbound.SniffingEnabled;
+        DestOverride = inbound.DestOverride ?? [];
         RouteOnly = inbound.RouteOnly;
         AllowLANConn = inbound.AllowLANConn;
         NewPort4LAN = inbound.NewPort4LAN;
@@ -168,23 +157,11 @@ public class OptionSettingViewModel : MyReactiveObject, ICloseable
         EnableFragment = _config.CoreBasicItem.EnableFragment;
         EnableFinalFragment = _config.CoreBasicItem.EnableFinalFragment;
         FragmentPackets = _config.Fragment4RayItem?.Packets;
-        FragmentLength = _config.Fragment4RayItem?.Length;
-        FragmentInterval = _config.Fragment4RayItem?.Interval;
+        FragmentLengths = Utils.List2String(_config.Fragment4RayItem?.Lengths);
+        FragmentDelays = Utils.List2String(_config.Fragment4RayItem?.Delays);
         FragmentMaxSplit = _config.Fragment4RayItem?.MaxSplit;
 
         #endregion Core
-
-        #region Core KCP
-
-        //Kcpmtu = _config.kcpItem.mtu;
-        //Kcptti = _config.kcpItem.tti;
-        //KcpuplinkCapacity = _config.kcpItem.uplinkCapacity;
-        //KcpdownlinkCapacity = _config.kcpItem.downlinkCapacity;
-        //KcpreadBufferSize = _config.kcpItem.readBufferSize;
-        //KcpwriteBufferSize = _config.kcpItem.writeBufferSize;
-        //Kcpcongestion = _config.kcpItem.congestion;
-
-        #endregion Core KCP
 
         #region UI
 
@@ -314,34 +291,33 @@ public class OptionSettingViewModel : MyReactiveObject, ICloseable
             NoticeManager.Instance.Enqueue(ResUI.FillLocalListeningPort);
             return;
         }
+        var fragmentLengths = Utils.String2List(FragmentLengths) ?? [];
+        var fragmentDelays = Utils.String2List(FragmentDelays) ?? [];
+        if (fragmentLengths.Any(item => !Utils.TryParseRange(item, 0, int.MaxValue, out _, out _))
+            || fragmentDelays.Any(item => !Utils.TryParseRange(item, 0, int.MaxValue, out _, out _))
+            || (FragmentMaxSplit.IsNotEmpty() && !Utils.TryParseMaxSplit(FragmentMaxSplit, 0, 10000, out _, out _)))
+        {
+            NoticeManager.Instance.Enqueue(ResUI.FillFragmentParameterError);
+            return;
+        }
         var needReboot = EnableStatistics != _config.GuiItem.EnableStatistics
                           || DisplayRealTimeSpeed != _config.GuiItem.DisplayRealTimeSpeed
                         || EnableDragDropSort != _config.UiItem.EnableDragDropSort
                         || EnableHWA != _config.GuiItem.EnableHWA
                         || CurrentFontFamily != _config.UiItem.CurrentFontFamily;
 
-        //if (Utile.IsNullOrEmpty(Kcpmtu.ToString()) || !Utile.IsNumeric(Kcpmtu.ToString())
-        //       || Utile.IsNullOrEmpty(Kcptti.ToString()) || !Utile.IsNumeric(Kcptti.ToString())
-        //       || Utile.IsNullOrEmpty(KcpuplinkCapacity.ToString()) || !Utile.IsNumeric(KcpuplinkCapacity.ToString())
-        //       || Utile.IsNullOrEmpty(KcpdownlinkCapacity.ToString()) || !Utile.IsNumeric(KcpdownlinkCapacity.ToString())
-        //       || Utile.IsNullOrEmpty(KcpreadBufferSize.ToString()) || !Utile.IsNumeric(KcpreadBufferSize.ToString())
-        //       || Utile.IsNullOrEmpty(KcpwriteBufferSize.ToString()) || !Utile.IsNumeric(KcpwriteBufferSize.ToString()))
-        //{
-        //    NoticeHandler.Instance.Enqueue(ResUI.FillKcpParameters);
-        //    return;
-        //}
-
         //Core
-        _config.Inbound.First().LocalPort = LocalPort;
-        _config.Inbound.First().SecondLocalPortEnabled = SecondLocalPortEnabled;
-        _config.Inbound.First().UdpEnabled = UdpEnabled;
-        _config.Inbound.First().SniffingEnabled = SniffingEnabled;
-        _config.Inbound.First().DestOverride = DestOverride?.ToList();
-        _config.Inbound.First().RouteOnly = RouteOnly;
-        _config.Inbound.First().AllowLANConn = AllowLANConn;
-        _config.Inbound.First().NewPort4LAN = NewPort4LAN;
-        _config.Inbound.First().User = User;
-        _config.Inbound.First().Pass = Pass;
+        var inbound = _config.Inbound.First();
+        inbound.LocalPort = LocalPort;
+        inbound.SecondLocalPortEnabled = SecondLocalPortEnabled;
+        inbound.UdpEnabled = UdpEnabled;
+        inbound.SniffingEnabled = SniffingEnabled;
+        inbound.DestOverride = DestOverride?.ToList();
+        inbound.RouteOnly = RouteOnly;
+        inbound.AllowLANConn = AllowLANConn;
+        inbound.NewPort4LAN = NewPort4LAN;
+        inbound.User = User;
+        inbound.Pass = Pass;
         if (_config.Inbound.Count > 1)
         {
             _config.Inbound.RemoveAt(1);
@@ -356,30 +332,12 @@ public class OptionSettingViewModel : MyReactiveObject, ICloseable
         _config.CoreBasicItem.EnableCacheFile4Sbox = EnableCacheFile4Sbox;
         _config.HysteriaItem.UpMbps = HyUpMbps ?? 0;
         _config.HysteriaItem.DownMbps = HyDownMbps ?? 0;
-        if (EnableFragment)
-        {
-            if (!Utils.TryParseRange(FragmentLength, 0, int.MaxValue, out _, out _))
-            {
-                NoticeManager.Instance.Enqueue(ResUI.FillFragmentParameterError);
-                return;
-            }
-            if (!Utils.TryParseRange(FragmentInterval, 1, 100, out _, out _))
-            {
-                NoticeManager.Instance.Enqueue(ResUI.FillFragmentParameterError);
-                return;
-            }
-            if (FragmentMaxSplit.IsNotEmpty()
-                && !Utils.TryParseMaxSplit(FragmentMaxSplit, 0, 10000, out _, out _))
-            {
-                NoticeManager.Instance.Enqueue(ResUI.FillFragmentParameterError);
-                return;
-            }
-        }
         _config.CoreBasicItem.EnableFragment = EnableFragment;
         _config.CoreBasicItem.EnableFinalFragment = EnableFinalFragment;
+        _config.Fragment4RayItem ??= new();
         _config.Fragment4RayItem.Packets = FragmentPackets;
-        _config.Fragment4RayItem.Length = FragmentLength;
-        _config.Fragment4RayItem.Interval = FragmentInterval;
+        _config.Fragment4RayItem.Lengths = fragmentLengths;
+        _config.Fragment4RayItem.Delays = fragmentDelays;
         _config.Fragment4RayItem.MaxSplit = FragmentMaxSplit;
 
         _config.GuiItem.AutoRun = AutoRun;
