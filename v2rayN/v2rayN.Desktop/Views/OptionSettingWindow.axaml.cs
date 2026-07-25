@@ -33,6 +33,8 @@ public partial class OptionSettingWindow : WindowBase<OptionSettingViewModel>
         cmbMtu.ItemsSource = Global.TunMtus;
         cmbStack.ItemsSource = Global.TunStacks;
         cmbIcmpRoutingPolicy.ItemsSource = Global.TunIcmpRoutingPolicies;
+        cmbIpv4Address.ItemsSource = Global.TunIpv4Address;
+        cmbIpv6Address.ItemsSource = Global.TunIpv6Address;
         cmbFragmentPackets.ItemsSource = Global.FragmentPacketsOptions;
 
         cmbCoreType1.ItemsSource = Global.CoreTypes;
@@ -86,8 +88,8 @@ public partial class OptionSettingWindow : WindowBase<OptionSettingViewModel>
             this.Bind(ViewModel, vm => vm.EnableFragment, v => v.togenableFragment.IsChecked).DisposeWith(disposables);
             this.Bind(ViewModel, vm => vm.EnableFinalFragment, v => v.togenableFinalFragment.IsChecked).DisposeWith(disposables);
             this.Bind(ViewModel, vm => vm.FragmentPackets, v => v.cmbFragmentPackets.SelectedItem).DisposeWith(disposables);
-            this.Bind(ViewModel, vm => vm.FragmentLength, v => v.txtFragmentLength.Text).DisposeWith(disposables);
-            this.Bind(ViewModel, vm => vm.FragmentInterval, v => v.txtFragmentInterval.Text).DisposeWith(disposables);
+            this.Bind(ViewModel, vm => vm.FragmentLengths, v => v.txtFragmentLengths.Text).DisposeWith(disposables);
+            this.Bind(ViewModel, vm => vm.FragmentDelays, v => v.txtFragmentDelays.Text).DisposeWith(disposables);
             this.Bind(ViewModel, vm => vm.FragmentMaxSplit, v => v.txtFragmentMaxSplit.Text).DisposeWith(disposables);
 
             this.Bind(ViewModel, vm => vm.AutoRun, v => v.togAutoRun.IsChecked).DisposeWith(disposables);
@@ -129,6 +131,8 @@ public partial class OptionSettingWindow : WindowBase<OptionSettingViewModel>
             this.Bind(ViewModel, vm => vm.TunIcmpRouting, v => v.cmbIcmpRoutingPolicy.SelectedValue).DisposeWith(disposables);
             this.Bind(ViewModel, vm => vm.TunEnableLegacyProtect, v => v.togEnableLegacyProtect.IsChecked).DisposeWith(disposables);
             this.Bind(ViewModel, vm => vm.TunRouteExcludeAddress, v => v.txtRouteExcludeAddress.Text).DisposeWith(disposables);
+            this.Bind(ViewModel, vm => vm.TunIpv4Address, v => v.cmbIpv4Address.SelectedValue).DisposeWith(disposables);
+            this.Bind(ViewModel, vm => vm.TunIpv6Address, v => v.cmbIpv6Address.SelectedValue).DisposeWith(disposables);
 
             this.Bind(ViewModel, vm => vm.CoreType1, v => v.cmbCoreType1.SelectedValue).DisposeWith(disposables);
             this.Bind(ViewModel, vm => vm.CoreType2, v => v.cmbCoreType2.SelectedValue).DisposeWith(disposables);

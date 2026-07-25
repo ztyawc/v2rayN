@@ -2,8 +2,6 @@ namespace ServiceLib;
 
 public class Global
 {
-    #region const
-
     public const string AppName = "v2rayN";
     public const string GithubUrl = "https://github.com";
     public const string GithubApiUrl = "https://api.github.com/repos";
@@ -108,9 +106,7 @@ public class Global
     public const string SingboxFakeDNSTag = "fake_dns";
 
     public const int Hysteria2DefaultHopInt = 30;
-
     public const string PolicyGroupExcludeKeywords = @"剩余|过期|到期|重置|[Rr]emaining|[Ee]xpir|[Rr]eset";
-
     public const string PolicyGroupDefaultAllFilter = $"^(?!.*(?:{PolicyGroupExcludeKeywords})).*$";
 
     public static readonly List<string> PolicyGroupDefaultFilterList =
@@ -561,7 +557,6 @@ public class Global
         "http",
         "tls",
         "quic",
-        "fakedns",
     ];
 
     public static readonly List<int> TunMtus =
@@ -742,6 +737,12 @@ public class Global
         "reply",
     ];
 
+    public static readonly List<string> FakeIPRanges =
+    [
+        "198.18.0.0/15",
+        "11.0.0.0/8",
+    ];
+
     public static readonly List<string> RootCertProviders =
     [
         "system",
@@ -749,5 +750,27 @@ public class Global
         MozillaRootProvider,
     ];
 
-    #endregion const
+    public static readonly IReadOnlyList<string> TunIpv4Address =
+    [
+        "172.18.0.1/30",
+        "172.31.0.1/30",
+        "172.20.0.1/30",
+        "172.16.0.1/30",
+        "192.168.100.1/30",
+        "10.10.14.1/30",
+        "10.1.0.1/30",
+        "10.0.0.1/30",
+    ];
+
+    public static readonly IReadOnlyList<string> TunIpv6Address =
+    [
+        "fc00::172:18:0:1/128",
+        "fc00::172:31:0:1/128",
+        "fc00::172:20:0:1/128",
+        "fc00::172:16:0:1/128",
+        "fc00::192:168:100:1/128",
+        "fc00::10:10:14:1/128",
+        "fc00::10:1:0:1/128",
+        "fc00::10:0:0:1/128",
+    ];
 }
