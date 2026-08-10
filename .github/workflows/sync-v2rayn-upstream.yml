@@ -2,7 +2,7 @@ name: Sync v2rayN upstream
 
 on:
   schedule:
-    - cron: "23 18 * * *"
+    - cron: "23 18 1 * *"
   workflow_dispatch:
 
 permissions:
