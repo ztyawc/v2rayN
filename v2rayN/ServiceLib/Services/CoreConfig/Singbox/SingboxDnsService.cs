@@ -137,12 +137,12 @@ public partial class CoreConfigSingboxService
         // fake ip
         if (simpleDnsItem.FakeIP == true)
         {
+            var fakeipRange = simpleDnsItem.FakeIPRange.IsNullOrEmpty() ? Global.FakeIPRanges.First() : simpleDnsItem.FakeIPRange;
             var fakeip = new Server4Sbox
             {
                 tag = Global.SingboxFakeDNSTag,
                 type = "fakeip",
-                inet4_range = "198.18.0.0/15",
-                inet6_range = "fc00::/18",
+                inet4_range = fakeipRange,
             };
             _coreConfig.dns.servers.Add(fakeip);
         }
@@ -171,7 +171,7 @@ public partial class CoreConfigSingboxService
             _coreConfig.dns.rules.Add(new()
             {
                 server = Global.SingboxDirectDNSTag,
-                strategy = Utils.DomainStrategy4Sbox(simpleDnsItem.Strategy4Freedom),
+                strategy = Utils.DomainStrategy4Sbox(simpleDnsItem.Strategy4ProxyDial),
                 domain = context.ProtectDomainList.ToList(),
             });
         }
@@ -266,7 +266,7 @@ public partial class CoreConfigSingboxService
             });
         }
 
-        if (simpleDnsItem.FakeIP == true && simpleDnsItem.GlobalFakeIp == true)
+        if (simpleDnsItem.FakeIP == true && simpleDnsItem.GlobalFakeIp != false)
         {
             var fakeipFilterRule = JsonUtils.Deserialize<Rule4Sbox>(EmbedUtils.GetEmbedText(Global.SingboxFakeIPFilterFileName));
             fakeipFilterRule.invert = true;

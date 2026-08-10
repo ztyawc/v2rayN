@@ -142,7 +142,7 @@
     <value>Failed to get the default configuration</value>
   </data>
   <data name="FailedImportedCustomServer" xml:space="preserve">
-    <value>Failed to import custom configuration Configuration</value>
+    <value>Failed to import configuration</value>
   </data>
   <data name="FailedReadConfiguration" xml:space="preserve">
     <value>Failed to read configuration file</value>
@@ -283,7 +283,7 @@
     <value>Configuration successful. {0}</value>
   </data>
   <data name="SuccessfullyImportedCustomServer" xml:space="preserve">
-    <value>Custom configuration Configuration imported successfully</value>
+    <value>Custom configuration imported successfully</value>
   </data>
   <data name="SuccessfullyImportedServerViaClipboard" xml:space="preserve">
     <value>{0} Configurations have been imported from clipboard</value>
@@ -385,7 +385,7 @@
     <value>All</value>
   </data>
   <data name="FillServerAddressCustom" xml:space="preserve">
-    <value>Please browse to import Configuration configuration</value>
+    <value>Please browse to import configuration</value>
   </data>
   <data name="Speedtesting" xml:space="preserve">
     <value>Testing...</value>
@@ -1501,7 +1501,7 @@
     <value>Select Profile</value>
   </data>
   <data name="TbFakeIPTips" xml:space="preserve">
-    <value>Applies globally by default, with built-in FakeIP filtering (sing-box only).</value>
+    <value>Applies globally by default, and built-in FakeIP filtering is only built into sing-box.</value>
   </data>
   <data name="PleaseAddAtLeastOneServer" xml:space="preserve">
     <value>Please Add At Least One Configuration</value>
@@ -1780,7 +1780,7 @@ The "Get Certificate" action may fail if a self-signed certificate is used or if
     <value>New Update</value>
   </data>
   <data name="MsgAllowInsecureDeprecated" xml:space="preserve">
-    <value>Warning: Xray will disable allowInsecure (skip certificate verification) in August 2026. Please switch to pinnedPeerCertSha256 (fixed certificate fingerprint) as soon as possible. allowInsecure will not be usable after its expiration.</value>
+    <value>The current node uses an unencrypted connection, meaning your communications could be directly monitored by network intermediaries controlled by authoritarian governments. For security reasons, nodes of this type cannot connect via Xray-core versions 26.2.6 or higher. If this is a self-built node, please enable TLS or other secure encryption, or pin the certificate using pinSHA256. If this is an airport/provider node, please contact your service provider for a technical upgrade. If the provider refuses to cooperate, it is recommended to switch to a service provider that prioritizes user security. For more information, please visit https://github.com/2dust/v2rayN/discussions/9460.</value>
   </data>
   <data name="TbRouteExcludeAddress" xml:space="preserve">
     <value>Route Exclude Address</value>
@@ -1829,5 +1829,35 @@ The "Get Certificate" action may fail if a self-signed certificate is used or if
   </data>
   <data name="TbRootCertificateProviderTip" xml:space="preserve">
     <value>Only applies to the v2rayN GUI's downloads and network requests. Does not affect the core's certificate validation.</value>
+  </data>
+  <data name="TbProxyDialResolveStrategy" xml:space="preserve">
+    <value>Proxy Dial Resolution Strategy</value>
+  </data>
+  <data name="TbProxyDialResolveStrategyTip" xml:space="preserve">
+    <value>Not recommended; may cause routing loops.</value>
+  </data>
+  <data name="TbEnableHappyEyeballs" xml:space="preserve">
+    <value>Enable Happy Eyeballs</value>
+  </data>
+  <data name="TbEnableHappyEyeballsTip" xml:space="preserve">
+    <value>Requires the UseIP Strategy. When enabled, it attempts IPv4 and IPv6 connections simultaneously and automatically selects the faster available path.</value>
+  </data>
+  <data name="TbIpv6Address" xml:space="preserve">
+    <value>Ipv6 Address</value>
+  </data>
+  <data name="TbIpv4Address" xml:space="preserve">
+    <value>Ipv4 Address</value>
+  </data>
+  <data name="menuAddCustomOutboundServer" xml:space="preserve">
+    <value>Add a custom outbound</value>
+  </data>
+  <data name="MsgCustomOutboundFileNotFound" xml:space="preserve">
+    <value>Custom outbound {0} file not found: {1}</value>
+  </data>
+  <data name="TbCustomOutboundTip" xml:space="preserve">
+    <value>Only single outbound/endpoint supported for xray/sing-box</value>
+  </data>
+  <data name="LvCustomCoreType" xml:space="preserve">
+    <value>Custom config core</value>
   </data>
 </root>

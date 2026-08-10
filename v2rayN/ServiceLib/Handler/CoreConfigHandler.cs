@@ -17,7 +17,7 @@ public static class CoreConfigHandler
         {
             result = node.CoreType switch
             {
-                ECoreType.mihomo => await new CoreConfigClashService(config).GenerateClientCustomConfig(node, fileName),
+                ECoreType.mihomo => await new CoreConfigClashService(config, context.IsTunEnabled).GenerateClientCustomConfig(node, fileName),
                 _ => await GenerateClientCustomConfig(node, fileName)
             };
         }
@@ -27,7 +27,7 @@ public static class CoreConfigHandler
         }
         else if (context.RunCoreType == ECoreType.mihomo_cmcc)
         {
-            result = await new CoreConfigClashService(config)
+            result = await new CoreConfigClashService(config, context.IsTunEnabled)
                 .GenerateClientCmccConfig(node, fileName, context.InboundPortOverride);
             return result;
         }
@@ -144,7 +144,8 @@ public static class CoreConfigHandler
         }
         else if (context.RunCoreType == ECoreType.mihomo_cmcc)
         {
-            return await new CoreConfigClashService(config).GenerateClientCmccConfig(context.Node, fileName, port);
+            return await new CoreConfigClashService(config, false)
+                .GenerateClientCmccConfig(context.Node, fileName, port);
         }
         else
         {

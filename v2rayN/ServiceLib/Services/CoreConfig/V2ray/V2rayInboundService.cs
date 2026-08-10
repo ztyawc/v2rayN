@@ -9,37 +9,38 @@ public partial class CoreConfigV2rayService
             var listen = "0.0.0.0";
             var listenPort = AppManager.Instance.GetLocalPort(EInboundProtocol.socks);
             _coreConfig.inbounds = [];
-            var inbound = BuildInbound(_config.Inbound.First(), EInboundProtocol.socks, true);
+            var inboundConf = _config.Inbound.First();
+            var inbound = BuildInbound(inboundConf, EInboundProtocol.socks, true);
             var isUsingLocalMixedPort = _node.Address == Global.Loopback && _node.Port == listenPort;
 
             if (!context.IsTunEnabled || !isUsingLocalMixedPort)
             {
                 _coreConfig.inbounds.Add(inbound);
 
-                if (_config.Inbound.First().SecondLocalPortEnabled)
+                if (inboundConf.SecondLocalPortEnabled)
                 {
-                    var inbound2 = BuildInbound(_config.Inbound.First(), EInboundProtocol.socks2, true);
+                    var inbound2 = BuildInbound(inboundConf, EInboundProtocol.socks2, true);
                     _coreConfig.inbounds.Add(inbound2);
                 }
 
-                if (_config.Inbound.First().AllowLANConn)
+                if (inboundConf.AllowLANConn)
                 {
-                    if (_config.Inbound.First().NewPort4LAN)
+                    if (inboundConf.NewPort4LAN)
                     {
-                        var inbound3 = BuildInbound(_config.Inbound.First(), EInboundProtocol.socks3, true);
+                        var inbound3 = BuildInbound(inboundConf, EInboundProtocol.socks3, true);
                         inbound3.listen = listen;
                         _coreConfig.inbounds.Add(inbound3);
 
                         // auth
-                        if (_config.Inbound.First().User.IsNotEmpty() && _config.Inbound.First().Pass.IsNotEmpty())
+                        if (inboundConf.User.IsNotEmpty() && inboundConf.Pass.IsNotEmpty())
                         {
                             inbound3.settings.auth = "password";
                             inbound3.settings.accounts =
                             [
                                 new()
                                 {
-                                    user = _config.Inbound.First().User,
-                                    pass = _config.Inbound.First().Pass,
+                                    user = inboundConf.User,
+                                    pass = inboundConf.Pass,
                                 },
 
                             ];
@@ -63,17 +64,26 @@ public partial class CoreConfigV2rayService
                     new Inbounds4Ray();
                 tunInbound.settings.name = context.IsMacOS ? $"utun{new Random().Next(99)}" : "xray_tun";
                 tunInbound.settings.MTU = _config.TunModeItem.Mtu;
-                if (!_config.TunModeItem.EnableIPv6Address)
+
+                var address = _config.TunModeItem.IPv4Address.NullIfEmpty() ?? Global.TunIPv4Address.First();
+                tunInbound.settings.gateway = [address];
+                // Route both families into the tunnel regardless of EnableIPv6Address. That option only
+                // controls whether the interface gets an IPv6 address; leaving ::/0 out of the routing
+                // table makes IPv6 follow the system default route and bypass the tunnel entirely.
+                tunInbound.settings.autoSystemRoutingTable = ["0.0.0.0/0", "::/0"];
+                if (_config.TunModeItem.EnableIPv6Address == true)
                 {
-                    tunInbound.settings.gateway = ["172.18.0.1/30"];
-                    tunInbound.settings.autoSystemRoutingTable = ["0.0.0.0/0"];
+                    var address6 = _config.TunModeItem.IPv6Address.NullIfEmpty() ?? Global.TunIPv6Address.First();
+                    tunInbound.settings.gateway.Add(address6);
                 }
+
                 var bindInterface = _config.CoreBasicItem.BindInterface?.TrimEx();
                 if (!bindInterface.IsNullOrEmpty())
                 {
                     tunInbound.settings.autoOutboundsInterface = bindInterface;
                 }
                 tunInbound.sniffing = inbound.sniffing;
+                // tunInbound.sniffing.routeOnly = inbound.sniffing.routeOnly;
                 tunInbound.sniffing.routeOnly = true;
 
                 if (_config.TunModeItem.RouteExcludeAddress is { Count: > 0 })
@@ -111,15 +121,8 @@ public partial class CoreConfigV2rayService
                     includeList = IPNetwork2.Supernet(includeList.ToArray()).ToList();
                     includeListV6 = IPNetwork2.Supernet(includeListV6.ToArray()).ToList();
 
-                    if (_config.TunModeItem.EnableIPv6Address)
-                    {
-                        tunInbound.settings.autoSystemRoutingTable = includeList.Select(x => x.ToString())
-                            .Concat(includeListV6.Select(x => x.ToString())).ToList();
-                    }
-                    else
-                    {
-                        tunInbound.settings.autoSystemRoutingTable = includeList.Select(x => x.ToString()).ToList();
-                    }
+                    tunInbound.settings.autoSystemRoutingTable = includeList.Select(x => x.ToString())
+                        .Concat(includeListV6.Select(x => x.ToString())).ToList();
                 }
 
                 _coreConfig.inbounds.Add(tunInbound);
@@ -151,6 +154,16 @@ public partial class CoreConfigV2rayService
         inbound.sniffing.enabled = inItem.SniffingEnabled;
         inbound.sniffing.destOverride = inItem.DestOverride;
         inbound.sniffing.routeOnly = inItem.RouteOnly;
+
+        if (_config.SimpleDNSItem.FakeIP == true)
+        {
+            // Ensure destOverride contains "fakedns" if FakeIP is enabled
+            inbound.sniffing.destOverride ??= [];
+            if (!inbound.sniffing.destOverride.Contains("fakedns"))
+            {
+                inbound.sniffing.destOverride.Add("fakedns");
+            }
+        }
 
         return inbound;
     }

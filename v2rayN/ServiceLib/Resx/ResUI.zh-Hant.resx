@@ -1498,7 +1498,7 @@
     <value>選擇節點</value>
   </data>
   <data name="TbFakeIPTips" xml:space="preserve">
-    <value>默認全域生效，內置 FakeIP 過濾，僅在 sing-box 中生效</value>
+    <value>默認全局生效，僅在 sing-box 中內置 FakeIP 過濾。</value>
   </data>
   <data name="PleaseAddAtLeastOneServer" xml:space="preserve">
     <value>請至少添加一個節點</value>
@@ -1774,7 +1774,11 @@
     <value>有更新</value>
   </data>
   <data name="MsgAllowInsecureDeprecated" xml:space="preserve">
-    <value>警告：Xray 將在 2026.8.1 停用跳過憑證驗證 allowInsecure ，請盡快改用憑證固定指紋 pinnedPeerCertSha256。到期後無法使用 allowInsecure。</value>
+    <value>目前節點使用未加密連接，您的通訊可能會被威權政府掌控的網路中間設施直接查看
+為了安全，此類節點無法透過 26.2.6+ 版本的Xray核心連接
+如果是自建節點請啟用 TLS 等安全加密，或固定憑證 pinSHA256
+若機場節點請聯絡服務商完成技術升級，如服務商拒絕配合，建議更換更重視用戶安全的服務商
+更多的信息，請訪問 https://github.com/2dust/v2rayN/discussions/9460</value>
   </data>
   <data name="TbVerifyPeerCertByName" xml:space="preserve">
     <value>Verify Peer Cert By Name</value>
@@ -1826,5 +1830,35 @@
   </data>
   <data name="TbRootCertificateProviderTip" xml:space="preserve">
     <value>僅適用於 v2rayN GUI 的下載與網路請求，不影響核心的憑證驗證</value>
+  </data>
+  <data name="TbProxyDialResolveStrategy" xml:space="preserve">
+    <value>連線代理解析策略</value>
+  </data>
+  <data name="TbProxyDialResolveStrategyTip" xml:space="preserve">
+    <value>不建議啟用，特殊情況可能造成連線循環</value>
+  </data>
+  <data name="TbEnableHappyEyeballs" xml:space="preserve">
+    <value>啟用 Happy Eyeballs</value>
+  </data>
+  <data name="TbEnableHappyEyeballsTip" xml:space="preserve">
+    <value>需搭配 UseIP 策略，啟用後會同時嘗試 IPv4 與 IPv6 連線，並自動選擇速度較快的路徑</value>
+  </data>
+  <data name="TbIpv6Address" xml:space="preserve">
+    <value>Ipv6 位址</value>
+  </data>
+  <data name="TbIpv4Address" xml:space="preserve">
+    <value>Ipv4 位址</value>
+  </data>
+  <data name="menuAddCustomOutboundServer" xml:space="preserve">
+    <value>新增自訂出站</value>
+  </data>
+  <data name="MsgCustomOutboundFileNotFound" xml:space="preserve">
+    <value>自訂出站 {0} 的檔案未找到：{1}</value>
+  </data>
+  <data name="TbCustomOutboundTip" xml:space="preserve">
+    <value>僅支援 xray/sing-box 的單一 outbound/endpoint</value>
+  </data>
+  <data name="LvCustomCoreType" xml:space="preserve">
+    <value>自訂設定核心</value>
   </data>
 </root>

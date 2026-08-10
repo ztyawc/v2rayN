@@ -178,7 +178,7 @@ namespace ServiceLib.Resx {
         }
         
         /// <summary>
-        ///   查找类似 Failed to import custom configuration Configuration 的本地化字符串。
+        ///   查找类似 Failed to import configuration 的本地化字符串。
         /// </summary>
         public static string FailedImportedCustomServer {
             get {
@@ -268,7 +268,7 @@ namespace ServiceLib.Resx {
         }
         
         /// <summary>
-        ///   查找类似 Please browse to import Configuration configuration 的本地化字符串。
+        ///   查找类似 Please browse to import configuration 的本地化字符串。
         /// </summary>
         public static string FillServerAddressCustom {
             get {
@@ -435,6 +435,15 @@ namespace ServiceLib.Resx {
         public static string LvCount {
             get {
                 return ResourceManager.GetString("LvCount", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 Custom config core 的本地化字符串。
+        /// </summary>
+        public static string LvCustomCoreType {
+            get {
+                return ResourceManager.GetString("LvCustomCoreType", resourceCulture);
             }
         }
         
@@ -732,6 +741,15 @@ namespace ServiceLib.Resx {
         public static string menuAddChildServer {
             get {
                 return ResourceManager.GetString("menuAddChildServer", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 Add a custom outbound 的本地化字符串。
+        /// </summary>
+        public static string menuAddCustomOutboundServer {
+            get {
+                return ResourceManager.GetString("menuAddCustomOutboundServer", resourceCulture);
             }
         }
         
@@ -1933,7 +1951,7 @@ namespace ServiceLib.Resx {
         }
         
         /// <summary>
-        ///   查找类似 Warning: Xray will disable allowInsecure (skip certificate verification) in August 2026. Please switch to pinnedPeerCertSha256 (fixed certificate fingerprint) as soon as possible. allowInsecure will not be usable after its expiration. 的本地化字符串。
+        ///   查找类似 The current node uses an unencrypted connection, meaning your communications could be directly monitored by network intermediaries controlled by authoritarian governments. For security reasons, nodes of this type cannot connect via Xray-core versions 26.2.6 or higher. If this is a self-built node, please enable TLS or other secure encryption, or pin the certificate using pinSHA256. If this is an airport/provider node, please contact your service provider for a technical upgrade. If the provider refuses to c [字符串的其余部分被截断]&quot;; 的本地化字符串。
         /// </summary>
         public static string MsgAllowInsecureDeprecated {
             get {
@@ -1974,6 +1992,15 @@ namespace ServiceLib.Resx {
         public static string MsgCoreNotSupportProtocolTransport {
             get {
                 return ResourceManager.GetString("MsgCoreNotSupportProtocolTransport", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 Custom outbound {0} file not found: {1} 的本地化字符串。
+        /// </summary>
+        public static string MsgCustomOutboundFileNotFound {
+            get {
+                return ResourceManager.GetString("MsgCustomOutboundFileNotFound", resourceCulture);
             }
         }
         
@@ -2626,7 +2653,7 @@ namespace ServiceLib.Resx {
         }
         
         /// <summary>
-        ///   查找类似 Custom configuration Configuration imported successfully 的本地化字符串。
+        ///   查找类似 Custom configuration imported successfully 的本地化字符串。
         /// </summary>
         public static string SuccessfullyImportedCustomServer {
             get {
@@ -2926,6 +2953,15 @@ namespace ServiceLib.Resx {
         }
         
         /// <summary>
+        ///   查找类似 Only single outbound/endpoint supported for xray/sing-box 的本地化字符串。
+        /// </summary>
+        public static string TbCustomOutboundTip {
+            get {
+                return ResourceManager.GetString("TbCustomOutboundTip", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   查找类似 Direct Target Resolution Strategy 的本地化字符串。
         /// </summary>
         public static string TbDirectResolveStrategy {
@@ -3061,6 +3097,24 @@ namespace ServiceLib.Resx {
         }
         
         /// <summary>
+        ///   查找类似 Enable Happy Eyeballs 的本地化字符串。
+        /// </summary>
+        public static string TbEnableHappyEyeballs {
+            get {
+                return ResourceManager.GetString("TbEnableHappyEyeballs", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 Requires the UseIP Strategy. When enabled, it attempts IPv4 and IPv6 connections simultaneously and automatically selects the faster available path. 的本地化字符串。
+        /// </summary>
+        public static string TbEnableHappyEyeballsTip {
+            get {
+                return ResourceManager.GetString("TbEnableHappyEyeballsTip", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   查找类似 DNS via Bridge 的本地化字符串。
         /// </summary>
         public static string TbEnabletDnsViaProxy {
@@ -3088,7 +3142,7 @@ namespace ServiceLib.Resx {
         }
         
         /// <summary>
-        ///   查找类似 Applies globally by default, with built-in FakeIP filtering (sing-box only). 的本地化字符串。
+        ///   查找类似 Applies globally by default, and built-in FakeIP filtering is only built into sing-box. 的本地化字符串。
         /// </summary>
         public static string TbFakeIPTips {
             get {
@@ -3331,6 +3385,24 @@ namespace ServiceLib.Resx {
         }
         
         /// <summary>
+        ///   查找类似 Ipv4 Address 的本地化字符串。
+        /// </summary>
+        public static string TbIpv4Address {
+            get {
+                return ResourceManager.GetString("TbIpv4Address", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 Ipv6 Address 的本地化字符串。
+        /// </summary>
+        public static string TbIpv6Address {
+            get {
+                return ResourceManager.GetString("TbIpv6Address", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   查找类似 Most Stable 的本地化字符串。
         /// </summary>
         public static string TbLeastLoad {
@@ -3525,6 +3597,24 @@ namespace ServiceLib.Resx {
         public static string TbProxies {
             get {
                 return ResourceManager.GetString("TbProxies", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 Proxy Dial Resolution Strategy 的本地化字符串。
+        /// </summary>
+        public static string TbProxyDialResolveStrategy {
+            get {
+                return ResourceManager.GetString("TbProxyDialResolveStrategy", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 Not recommended; may cause routing loops. 的本地化字符串。
+        /// </summary>
+        public static string TbProxyDialResolveStrategyTip {
+            get {
+                return ResourceManager.GetString("TbProxyDialResolveStrategyTip", resourceCulture);
             }
         }
         

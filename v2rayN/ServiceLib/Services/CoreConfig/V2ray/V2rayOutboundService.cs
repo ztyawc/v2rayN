@@ -52,6 +52,12 @@ public partial class CoreConfigV2rayService
     {
         var txtOutbound = EmbedUtils.GetEmbedText(Global.V2raySampleOutbound);
         var outbound = JsonUtils.Deserialize<Outbounds4Ray>(txtOutbound);
+        if (_node.ConfigType == EConfigType.Outbound)
+        {
+            outbound.tag = baseTagName;
+            context.CustomOutboundMap[outbound] = _node.IndexId;
+            return outbound;
+        }
         FillOutbound(outbound);
         outbound.tag = baseTagName;
         return outbound;
@@ -404,7 +410,6 @@ public partial class CoreConfigV2rayService
 
                 TlsSettings4Ray tlsSettings = new()
                 {
-                    allowInsecure = _node.GetAllowInsecure(),
                     alpn = _node.GetAlpn(),
                     fingerprint = _node.Fingerprint.IsNullOrEmpty() ? _config.CoreBasicItem.DefFingerprint : _node.Fingerprint,
                     echConfigList = _node.EchConfigList.NullIfEmpty(),
@@ -438,12 +443,10 @@ public partial class CoreConfigV2rayService
                     }
                     tlsSettings.certificates = certsettings;
                     tlsSettings.disableSystemRoot = true;
-                    tlsSettings.allowInsecure = false;
                 }
                 else if (!_node.CertSha.IsNullOrEmpty())
                 {
                     tlsSettings.pinnedPeerCertSha256 = _node.CertSha;
-                    tlsSettings.allowInsecure = false;
                 }
                 streamSettings.tlsSettings = tlsSettings;
             }
@@ -788,12 +791,12 @@ public partial class CoreConfigV2rayService
                     }
                     else if (chainStartNodes.Count > 1)
                     {
-                        var existedChainNodes = JsonUtils.DeepCopy(resultOutbounds);
+                        var existedChainNodes = CloneOutbounds(resultOutbounds);
                         resultOutbounds.Clear();
                         var j = 0;
                         foreach (var chainStartNode in chainStartNodes)
                         {
-                            var existedChainNodesClone = JsonUtils.DeepCopy(existedChainNodes);
+                            var existedChainNodesClone = CloneOutbounds(existedChainNodes);
                             foreach (var existedChainNode in existedChainNodesClone)
                             {
                                 var cloneTag = $"{existedChainNode.tag}-clone-{j + 1}";
@@ -865,21 +868,10 @@ public partial class CoreConfigV2rayService
                                              && (n.streamSettings?.sockopt?.dialerProxy?.IsNullOrEmpty() ?? true))
                 .ToList();
 
-        var (fragmentMask, noiseMask) = BuildFragmentsMasks();
+        var fragmentMask = BuildFragmentsMasks();
 
         foreach (var outbound in actOutboundWithTlsList)
         {
-            //var packets = configPackets;
-            //if (outbound.streamSettings.security == Global.StreamSecurityReality
-            //    && packets == "tlshello")
-            //{
-            //    packets = "1-3";
-            //}
-            //else if (outbound.streamSettings.security == Global.StreamSecurity
-            //         && packets != "tlshello")
-            //{
-            //    packets = "tlshello";
-            //}
             var finalMaskJsonObj = JsonUtils.ParseJson(JsonUtils.Serialize(outbound.streamSettings?.finalmask)) as JsonObject ?? new JsonObject();
             // tcp fragment
             var tcpFinalmaskList = finalMaskJsonObj["tcp"] as JsonArray ?? [];
@@ -888,13 +880,6 @@ public partial class CoreConfigV2rayService
                 tcpFinalmaskList.Add(JsonUtils.SerializeToNode(fragmentMask));
                 finalMaskJsonObj["tcp"] = tcpFinalmaskList;
             }
-            // udp noise
-            var udpFinalmaskList = finalMaskJsonObj["udp"] as JsonArray ?? [];
-            if (udpFinalmaskList.Count == 0)
-            {
-                udpFinalmaskList.Add(JsonUtils.SerializeToNode(noiseMask));
-                finalMaskJsonObj["udp"] = udpFinalmaskList;
-            }
             // write back
             outbound.streamSettings.finalmask = finalMaskJsonObj;
         }
@@ -902,7 +887,7 @@ public partial class CoreConfigV2rayService
 
     private void ApplyFinalFragment()
     {
-        var (fragmentMask, noiseMask) = BuildFragmentsMasks();
+        var fragmentMask = BuildFragmentsMasks();
         var actOutboundList = _coreConfig.outbounds.Where(n => n.tag.StartsWith(Global.ProxyTag)).ToList();
 
         var fragmentFreedom = new Outbounds4Ray()
@@ -914,9 +899,8 @@ public partial class CoreConfigV2rayService
                 finalmask = new Finalmask4Ray
                 {
                     tcp = [fragmentMask],
-                    udp = [noiseMask],
-                }
-            }
+                },
+            },
         };
 
         foreach (var outbound in actOutboundList)
@@ -934,12 +918,21 @@ public partial class CoreConfigV2rayService
         }
     }
 
-    private (Mask4Ray tcpFragment, Mask4Ray udpNoise) BuildFragmentsMasks()
+    private Mask4Ray BuildFragmentsMasks()
     {
         var configPackets = _config.Fragment4RayItem?.Packets.NullIfEmpty() ?? "tlshello";
-        var configLength = _config.Fragment4RayItem?.Length.NullIfEmpty() ?? "50-100";
-        var configDelay = _config.Fragment4RayItem?.Interval.NullIfEmpty() ?? "10-20";
+        var configLengths = _config.Fragment4RayItem?.Lengths ?? [];
+        var configDelays = _config.Fragment4RayItem?.Delays ?? [];
         var configMaxSplit = _config.Fragment4RayItem?.MaxSplit.NullIfEmpty() ?? "0";
+
+        if (configLengths.Count == 0)
+        {
+            configLengths = ["50-100"];
+        }
+        if (configDelays.Count == 0)
+        {
+            configDelays = ["10-20"];
+        }
 
         var maxSplit = 0;
         var parts = configMaxSplit.Split('-');
@@ -954,21 +947,30 @@ public partial class CoreConfigV2rayService
             settings = new MaskSettings4Ray
             {
                 packets = configPackets,
-                length = configLength,
-                delay = configDelay,
+                lengths = configLengths,
+                delays = configDelays,
                 maxSplit = maxSplit,
-            }
-        };
-        var noiseMask = new Mask4Ray
-        {
-            type = "noise",
-            settings = new MaskSettings4Ray
-            {
-                length = "10-20",
-                delay = "10-16",
-            }
+                // For legacy xray compatibility, remove this in the future
+                length = configLengths.FirstOrDefault(),
+                delay = configDelays.FirstOrDefault(),
+            },
         };
 
-        return (fragmentMask, noiseMask);
+        return fragmentMask;
+    }
+
+    private List<Outbounds4Ray> CloneOutbounds(List<Outbounds4Ray> outbounds)
+    {
+        var clonedOutbounds = new List<Outbounds4Ray>();
+        foreach (var outbound in outbounds)
+        {
+            var clonedOutbound = JsonUtils.DeepCopy(outbound);
+            clonedOutbounds.Add(clonedOutbound);
+            if (context.CustomOutboundMap.ContainsKey(outbound))
+            {
+                context.CustomOutboundMap[clonedOutbound] = context.CustomOutboundMap[outbound];
+            }
+        }
+        return clonedOutbounds;
     }
 }

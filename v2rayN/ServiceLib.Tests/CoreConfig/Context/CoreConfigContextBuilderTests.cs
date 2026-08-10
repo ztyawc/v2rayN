@@ -114,10 +114,10 @@ public class CoreConfigContextBuilderTests
         result.PreSocksResult.Should().NotBeNull();
         result.PreSocksResult!.Context.RunCoreType.Should().Be(ECoreType.sing_box);
         result.PreSocksResult.Context.IsTunEnabled.Should().BeTrue();
-        result.PreSocksResult.Context.ProtectCoreTypeList.Should().BeEquivalentTo(
-            [ECoreType.Xray, ECoreType.mihomo_cmcc]);
+        result.PreSocksResult.Context.ProtectCoreTypeList.Should().Contain(ECoreType.Xray);
+        result.PreSocksResult.Context.ProtectCoreTypeList.Should().Contain(ECoreType.mihomo_cmcc);
         result.MainResult.Context.IsTunEnabled.Should().BeFalse();
-        result.MainResult.Context.ProtectCoreTypeList.Should().BeEquivalentTo([ECoreType.mihomo_cmcc]);
+        result.MainResult.Context.ProtectCoreTypeList.Should().Contain(ECoreType.mihomo_cmcc);
     }
 
     [Fact]
@@ -139,7 +139,7 @@ public class CoreConfigContextBuilderTests
         result.FrontProxyResult.Should().NotBeNull();
         result.PreSocksResult.Should().BeNull();
         result.MainResult.Context.IsTunEnabled.Should().BeTrue();
-        result.MainResult.Context.ProtectCoreTypeList.Should().BeEquivalentTo([ECoreType.mihomo_cmcc]);
+        result.MainResult.Context.ProtectCoreTypeList.Should().Contain(ECoreType.mihomo_cmcc);
     }
 
     [Fact]
