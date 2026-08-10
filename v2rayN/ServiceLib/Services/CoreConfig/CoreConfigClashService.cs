@@ -1,9 +1,11 @@
 namespace ServiceLib.Services.CoreConfig;
 
 /// <summary>
-/// Core configuration file processing class
+/// Core configuration file processing class.
+/// The TUN state is taken as a snapshot so the generated config always agrees
+/// with the launch elevation decision (see CoreManager.ShouldRunAsSudo).
 /// </summary>
-public class CoreConfigClashService(Config config)
+public class CoreConfigClashService(Config config, bool isTunEnabled)
 {
     private static readonly string _tag = "CoreConfigClashService";
     private const string CmccProxyName = "cmcc-proxy";
@@ -75,7 +77,7 @@ public class CoreConfigClashService(Config config)
             fileContent["ipv6"] = config.ClashUIItem.EnableIPv6;
             fileContent["mode"] = nameof(ERuleMode.Rule).ToLower();
 
-            if (config.TunModeItem.EnableTun && inboundPort == null)
+            if (isTunEnabled && inboundPort == null)
             {
                 var tun = EmbedUtils.GetEmbedText(Global.ClashTunYaml);
                 if (tun.IsNotEmpty())
@@ -213,7 +215,7 @@ public class CoreConfigClashService(Config config)
             }
 
             //enable tun mode
-            if (config.TunModeItem.EnableTun)
+            if (isTunEnabled)
             {
                 var tun = EmbedUtils.GetEmbedText(Global.ClashTunYaml);
                 if (tun.IsNotEmpty())
@@ -282,7 +284,7 @@ public class CoreConfigClashService(Config config)
         }
         foreach (var item in mixinContent)
         {
-            if (!config.TunModeItem.EnableTun && item.Key == "tun")
+            if (!isTunEnabled && item.Key == "tun")
             {
                 continue;
             }

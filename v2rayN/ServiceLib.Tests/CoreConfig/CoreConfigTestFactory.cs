@@ -168,6 +168,23 @@ internal static class CoreConfigTestFactory
         };
     }
 
+    public static ProfileItem CreateCustomOutboundNode(ECoreType coreType, string indexId = "node-custom-1",
+        string remarks = "demo-custom-outbound", string address = "custom_outbound.json")
+    {
+        return new ProfileItem
+        {
+            IndexId = indexId,
+            ConfigType = EConfigType.Outbound,
+            CoreType = coreType,
+            Remarks = remarks,
+            Address = address,
+            Port = 0,
+            Network = nameof(ETransport.raw),
+            StreamSecurity = string.Empty,
+            Subid = string.Empty,
+        };
+    }
+
     public static ProfileItem CreatePolicyGroupNode(ECoreType coreType, string indexId, string remarks,
         IEnumerable<string> childIndexIds)
     {
@@ -250,6 +267,14 @@ internal static class CoreConfigTestFactory
         var config = CreateConfig(coreType);
         config.TunModeItem.EnableTun = true;
         config.TunModeItem.RouteExcludeAddress = ["10.0.0.1/32", "192.168.1.0/24", "fc00::/7"];
+        return config;
+    }
+
+    public static Config CreateConfigWithTun(ECoreType coreType, bool enableIPv6Address)
+    {
+        var config = CreateConfig(coreType);
+        config.TunModeItem.EnableTun = true;
+        config.TunModeItem.EnableIPv6Address = enableIPv6Address;
         return config;
     }
 }

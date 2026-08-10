@@ -28,7 +28,8 @@ public class CoreConfigCmccServiceTests
 
         try
         {
-            var result = await new CoreConfigClashService(config).GenerateClientCmccConfig(node, fileName, 2080);
+            var result = await new CoreConfigClashService(config, false)
+                .GenerateClientCmccConfig(node, fileName, 2080);
 
             result.Success.Should().BeTrue(result.Msg);
             var content = await File.ReadAllTextAsync(fileName, TestContext.Current.CancellationToken);
@@ -80,7 +81,8 @@ public class CoreConfigCmccServiceTests
 
         try
         {
-            var result = await new CoreConfigClashService(config).GenerateClientCmccConfig(node, fileName, port);
+            var result = await new CoreConfigClashService(config, false)
+                .GenerateClientCmccConfig(node, fileName, port);
             result.Success.Should().BeTrue(result.Msg);
             process = Process.Start(new ProcessStartInfo
             {

@@ -570,6 +570,51 @@ public class CoreConfigV2rayServiceTests
         directOutbound!.streamSettings.sockopt!.domainStrategy.Should().Be("UseIPv4");
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void GenerateClientConfigContent_Tun_ShouldRouteIPv6IntoTunnel(bool enableIPv6Address)
+    {
+        var config = CoreConfigTestFactory.CreateConfigWithTun(ECoreType.Xray, enableIPv6Address);
+        CoreConfigTestFactory.BindAppManagerConfig(config);
+
+        var node = CoreConfigTestFactory.CreateVmessNode(ECoreType.Xray, "n-main", "main");
+        var context = CoreConfigTestFactory.CreateContext(config, node, ECoreType.Xray);
+
+        var result = new CoreConfigV2rayService(context).GenerateClientConfigContent();
+
+        result.Success.Should().BeTrue();
+        var cfg = JsonUtils.Deserialize<V2rayConfig>(result.Data!.ToString())!;
+        var tunInbound = cfg.inbounds.FirstOrDefault(i => i.protocol == "tun");
+
+        tunInbound.Should().NotBeNull();
+        tunInbound!.settings.autoSystemRoutingTable.Should().Contain("0.0.0.0/0");
+        tunInbound.settings.autoSystemRoutingTable.Should().Contain("::/0");
+
+        // EnableIPv6Address governs the interface address only, never the routing table.
+        tunInbound.settings.gateway.Should().HaveCount(enableIPv6Address ? 2 : 1);
+    }
+
+    [Fact]
+    public void GenerateClientConfigContent_TunRouteExcludeAddress_ShouldIncludeIPv6Ranges()
+    {
+        var config = CoreConfigTestFactory.CreateConfigWithTunRouteExcludeAddress(ECoreType.Xray);
+        config.TunModeItem.EnableIPv6Address = false;
+        CoreConfigTestFactory.BindAppManagerConfig(config);
+
+        var node = CoreConfigTestFactory.CreateVmessNode(ECoreType.Xray, "n-main", "main");
+        var context = CoreConfigTestFactory.CreateContext(config, node, ECoreType.Xray);
+
+        var result = new CoreConfigV2rayService(context).GenerateClientConfigContent();
+
+        result.Success.Should().BeTrue();
+        var cfg = JsonUtils.Deserialize<V2rayConfig>(result.Data!.ToString())!;
+        var tunInbound = cfg.inbounds.FirstOrDefault(i => i.protocol == "tun");
+
+        tunInbound.Should().NotBeNull();
+        tunInbound!.settings.autoSystemRoutingTable.Should().Contain(x => x.Contains(':'));
+    }
+
     [Fact]
     public void GenerateClientConfigContent_TunRouteExcludeAddress()
     {
@@ -591,5 +636,44 @@ public class CoreConfigV2rayServiceTests
         tunInbound!.settings.autoSystemRoutingTable.Should().NotContain("0.0.0.0/0");
         tunInbound!.settings.autoSystemRoutingTable.Should().Contain("10.0.0.0/32");
         tunInbound!.settings.autoSystemRoutingTable.Should().Contain("10.0.0.2/31");
+    }
+
+    [Fact]
+    public void GenerateClientConfigContent_CustomOutbound_ShouldReplaceWithUserCustomOutboundJson()
+    {
+        var config = CoreConfigTestFactory.CreateConfig(ECoreType.Xray);
+        CoreConfigTestFactory.BindAppManagerConfig(config);
+
+        var customNode = CoreConfigTestFactory.CreateCustomOutboundNode(ECoreType.Xray, "n-custom", "custom-xray");
+        var customJsonContent = """
+        {
+          "protocol": "shadowsocks",
+          "settings": {
+            "servers": [
+              {
+                "address": "1.2.3.4",
+                "port": 8388,
+                "method": "aes-128-gcm",
+                "password": "custom_password"
+              }
+            ]
+          }
+        }
+        """;
+
+        var context = CoreConfigTestFactory.CreateContext(config, customNode, ECoreType.Xray);
+        context.CustomOutboundContent[customNode.IndexId] = customJsonContent;
+
+        var result = new CoreConfigV2rayService(context).GenerateClientConfigContent();
+
+        result.Success.Should().BeTrue($"ret msg: {result.Msg}");
+        result.Data.Should().NotBeNull();
+
+        var cfg = JsonUtils.Deserialize<V2rayConfig>(result.Data!.ToString());
+        cfg.Should().NotBeNull();
+        var proxyOutbound = cfg!.outbounds.FirstOrDefault(o => o.tag == Global.ProxyTag);
+        proxyOutbound.Should().NotBeNull();
+        proxyOutbound!.protocol.Should().Be("shadowsocks");
+        proxyOutbound.settings.servers.Should().NotBeNull();
     }
 }

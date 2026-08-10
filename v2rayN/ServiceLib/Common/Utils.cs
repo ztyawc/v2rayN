@@ -757,7 +757,7 @@ public class Utils
     {
         try
         {
-            if (!(defaultPort == 0 || Utils.PortInUse(defaultPort)))
+            if (defaultPort != 0 && !PortInUse(defaultPort))
             {
                 return defaultPort;
             }

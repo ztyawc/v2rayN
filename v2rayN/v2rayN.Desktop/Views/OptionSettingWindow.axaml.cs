@@ -33,8 +33,8 @@ public partial class OptionSettingWindow : WindowBase<OptionSettingViewModel>
         cmbMtu.ItemsSource = Global.TunMtus;
         cmbStack.ItemsSource = Global.TunStacks;
         cmbIcmpRoutingPolicy.ItemsSource = Global.TunIcmpRoutingPolicies;
-        cmbIpv4Address.ItemsSource = Global.TunIpv4Address;
-        cmbIpv6Address.ItemsSource = Global.TunIpv6Address;
+        cmbIpv4Address.ItemsSource = Global.TunIPv4Address;
+        cmbIpv6Address.ItemsSource = Global.TunIPv6Address;
         cmbFragmentPackets.ItemsSource = Global.FragmentPacketsOptions;
 
         cmbCoreType1.ItemsSource = Global.CoreTypes;
@@ -109,8 +109,7 @@ public partial class OptionSettingWindow : WindowBase<OptionSettingViewModel>
             this.Bind(ViewModel, vm => vm.UdpTestTarget, v => v.cmbUdpTestTarget.Text).DisposeWith(disposables);
             this.Bind(ViewModel, vm => vm.MixedConcurrencyCount, v => v.cmbMixedConcurrencyCount.SelectedValue).DisposeWith(disposables);
             this.Bind(ViewModel, vm => vm.SubConvertUrl, v => v.cmbSubConvertUrl.Text).DisposeWith(disposables);
-            this.Bind<OptionSettingViewModel, OptionSettingWindow, int, int>(ViewModel,
-                vm => vm.MainGirdOrientation, view => view.cmbMainGirdOrientation.SelectedIndex).DisposeWith(disposables);
+            this.Bind(ViewModel, vm => vm.MainGirdOrientation, view => view.cmbMainGirdOrientation.SelectedIndex).DisposeWith(disposables);
             this.Bind(ViewModel, vm => vm.GeoFileSourceUrl, v => v.cmbGetFilesSourceUrl.Text).DisposeWith(disposables);
             this.Bind(ViewModel, vm => vm.SrsFileSourceUrl, v => v.cmbSrsFilesSourceUrl.Text).DisposeWith(disposables);
             this.Bind(ViewModel, vm => vm.RoutingRulesSourceUrl, v => v.cmbRoutingRulesSourceUrl.Text).DisposeWith(disposables);
@@ -131,8 +130,8 @@ public partial class OptionSettingWindow : WindowBase<OptionSettingViewModel>
             this.Bind(ViewModel, vm => vm.TunIcmpRouting, v => v.cmbIcmpRoutingPolicy.SelectedValue).DisposeWith(disposables);
             this.Bind(ViewModel, vm => vm.TunEnableLegacyProtect, v => v.togEnableLegacyProtect.IsChecked).DisposeWith(disposables);
             this.Bind(ViewModel, vm => vm.TunRouteExcludeAddress, v => v.txtRouteExcludeAddress.Text).DisposeWith(disposables);
-            this.Bind(ViewModel, vm => vm.TunIpv4Address, v => v.cmbIpv4Address.SelectedValue).DisposeWith(disposables);
-            this.Bind(ViewModel, vm => vm.TunIpv6Address, v => v.cmbIpv6Address.SelectedValue).DisposeWith(disposables);
+            this.Bind(ViewModel, vm => vm.TunIPv4Address, v => v.cmbIpv4Address.SelectedValue).DisposeWith(disposables);
+            this.Bind(ViewModel, vm => vm.TunIPv6Address, v => v.cmbIpv6Address.SelectedValue).DisposeWith(disposables);
 
             this.Bind(ViewModel, vm => vm.CoreType1, v => v.cmbCoreType1.SelectedValue).DisposeWith(disposables);
             this.Bind(ViewModel, vm => vm.CoreType2, v => v.cmbCoreType2.SelectedValue).DisposeWith(disposables);

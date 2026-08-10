@@ -13,6 +13,7 @@ public record CoreConfigContext
 
     // Optional local inbound used when a helper core exposes a cross-core front proxy.
     public int? InboundPortOverride { get; init; }
+    public Dictionary<string, string> CustomOutboundContent { get; init; } = new();
 
     // Test ServerTestItem Map
     public Dictionary<string, string> ServerTestItemMap { get; init; } = new();
@@ -25,4 +26,7 @@ public record CoreConfigContext
 
     public bool IsWindows { get; init; }
     public bool IsMacOS { get; init; }
+
+    // Generation Context
+    public Dictionary<object, string> CustomOutboundMap { get; init; } = new();
 }
